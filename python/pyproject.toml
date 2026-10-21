@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "syntonic-engine"
+version = "0.1.0"
+description = "Joint correction with a time window from the Syntony Principle (Theorem U'), nothing tuned"
+license = {text = "Apache-2.0"}
+authors = [{name = "Jean-Pierre Bronsard"}]
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+
+[tool.setuptools]
+packages = ["syntonic_engine"]

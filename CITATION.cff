@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Syntonic Engine"
+abstract: >-
+  A joint correction loop whose time window comes from the Syntony Principle (Theorem U'), with nothing tuned.
+  Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On the simulated MAESTRO 1 joint bench it
+  matches a joint-by-joint tuned PID at the baton tip under steady noise and does better when the noise jumps.
+authors:
+  - family-names: "Bronsard"
+    given-names: "Jean-Pierre"
+    orcid: "https://orcid.org/0009-0008-6639-7553"
+    affiliation: "SyntonicAI Recherche, Montréal, QC, Canada"
+version: "0.1.0"
+license: Apache-2.0
+repository-code: "https://github.com/jpbronsard/syntonic-engine"
+keywords:
+  - syntony principle
+  - robotics
+  - adaptive control
+  - integration window
+  - embedded
+  - Rust
+  - C++
+references:
+  - type: article
+    authors:
+      - family-names: "Bronsard"
+        given-names: "Jean-Pierre"
+    title: "The Syntony Principle"
+    doi: "10.5281/zenodo.17254395"
+    year: 2026

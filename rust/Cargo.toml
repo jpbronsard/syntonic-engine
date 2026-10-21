@@ -1,0 +1,14 @@
+[package]
+name = "syntonic-engine"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Jean-Pierre Bronsard <jpee2@hotmail.com>"]
+repository = "https://github.com/jpbronsard/syntonic-engine"
+description = "Joint correction with a time window from the Syntony Principle (Theorem U'), nothing tuned. no_std."
+keywords = ["robotics", "control", "no-std", "syntony", "filter"]
+categories = ["science::robotics", "no-std", "embedded"]
+readme = "README.md"
+
+[dependencies]
+libm = "0.2"
