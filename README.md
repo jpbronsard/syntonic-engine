@@ -7,6 +7,10 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549690.svg)](https://doi.org/10.5281/zenodo.23549690)
 
+![MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine](docs/media/maestro1_conducting.gif)
+
+*MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video (CC BY-SA 4.0).*
+
 ---
 
 I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned.
