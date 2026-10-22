@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE.
 //
 // Replays a log written by tools/make_replay_log.py through the Rust engine and compares every command with the
-// Python engine's.   cargo run --release --example replay -- replay_log.bin replay_w0.bin
+// Python engine's. From the rust/ folder:  cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin
 use std::{env, fs};
 use syntonic_engine::{Config, Engine};
 

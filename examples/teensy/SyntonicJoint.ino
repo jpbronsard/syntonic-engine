@@ -10,9 +10,9 @@ syntonic::Engine<N> eng;
 IntervalTimer loopTimer;
 volatile bool tick = false;
 
-double readEncoder(int j) { return 0.0; }         // TODO: joint angle in rad (AS5048A over SPI)
-double plannedAngle(int j, double t) { return 0.0; }   // TODO: the planned trajectory
-void writeServo(int j, double angle) { }          // TODO: angle (rad) to PWM pulse width
+double readEncoder(int j) { (void)j; return 0.0; }                       // TODO: joint angle in rad (AS5048A over SPI)
+double plannedAngle(int j, double t) { (void)j; (void)t; return 0.0; }   // TODO: the planned trajectory
+void writeServo(int j, double angle) { (void)j; (void)angle; }           // TODO: angle (rad) to PWM pulse width
 
 void onTick() { tick = true; }
 
@@ -33,7 +33,8 @@ void loop() {
   static uint32_t k = 0;
   double t = k * 0.001, q[N], a[N], b[N];
   for (int j = 0; j < N; j++) { q[j] = plannedAngle(j, t); a[j] = readEncoder(j); }
-  for (int j = 0; j < N; j++) b[j] = readEncoder(j);   // second read, at least one sensor sample later
+  delayMicroseconds(100);                              // the AS5048 refreshes every ~90 us: wait for a new sample
+  for (int j = 0; j < N; j++) b[j] = readEncoder(j);   // second read, independent noise
   const double* cmd = eng.step(q, a, b);
   if (k % 3 == 0) for (int j = 0; j < N; j++) writeServo(j, cmd[j]);
   k++;

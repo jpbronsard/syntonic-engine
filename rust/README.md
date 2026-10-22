@@ -13,15 +13,15 @@ let cmd = eng.step(&q_plan, &read_a, &read_b, None);                 // None: th
 // send cmd to the servos on each frame; eng.tau holds each joint's window (s)
 ```
 
-`Engine<N, RING>` handles `N` joints. `RING` is the length of the residual history in loop ticks and must be larger than the longest lag in ticks: 65 is enough at 1 kHz, and the default of 129 also covers 2 kHz. For 12 joints the engine takes about 13 KB, so on a small board keep it in a `static` rather than on the stack.
+`Engine<N, RING>` handles `N` joints. `RING` is the length of the residual history in loop ticks and must be larger than the longest lag in ticks: 65 is enough at 1 kHz, and the default of 129 also covers 2 kHz. For 12 joints the engine takes about 14 KB with the default `RING` (8 KB with `RING = 65`), so on a small board keep it in a `static` rather than on the stack.
 
 ## Checking it against Python
 
 `tools/make_replay_log.py` runs the Python engine in the servo model of `examples/servo_bench.py` for 33 s and records every input and output. The replay example feeds the same inputs to the Rust engine and compares the commands:
 
 ```
-python rust/tools/make_replay_log.py
-cargo run --release --example replay -- replay_log.bin replay_w0.bin
+python rust/tools/make_replay_log.py                 # from the repository root
+cd rust && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin
 ```
 
 On our machine the largest difference over the 33,000 ticks was 5.4e-14 rad, with identical final windows on all twelve joints. `cargo test` runs the unit tests and the example in the documentation.

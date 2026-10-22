@@ -7,7 +7,7 @@ The scripts are in `bench/scripts/`: `flow_v6_rate.py` runs the loop at 2 kHz (w
 ## In short
 
 - At 1 kHz, the syntonic engine (Theorem U', nothing tuned) matches a PID tuned on the same movement at the baton tip when the noise is steady. The tip-error ratio is 1.006 on one excerpt and 1.063 on the other, both inside the ±10 % margin declared beforehand. When the noise jumps, the syntonic engine does better at the tip, by 29 % and 11 %. These figures come from ten paired noise draws per case (v10). Parity is what we expected: a PID tuned for fixed conditions sits close to the optimum for those conditions, and the syntonic engine reaches that optimum by derivation instead.
-- Scored on joint angles, each joint on its own, the tuned PID is about 28 % tighter under steady noise. Its gains were chosen to minimise exactly that error. The syntonic engine's joint errors partly cancel at the tip (see "Tip against joints" below).
+- Scored on joint angles, each joint on its own, the syntonic engine's error is about 28 % larger than the tuned PID's under steady noise. The PID's gains were chosen to minimise exactly that error. The syntonic engine's joint errors largely cancel at the tip (see "Tip against joints" below).
 - The window needs a lower bound equal to the loop delay, D = half the servo PWM frame + half a controller tick + 0.1 ms for the AS5048. We wrote this rule down before run v8, and run v9 confirmed it across servo frames of 2, 3, 5 and 8 ms, within 0.4 % of the best floor found by sweeping. Because it comes from the hardware, the loop stays free of tuned parameters.
 - A floor below the loop delay costs accuracy, and with slow servo frames it costs stability too. With an 8 ms frame, a 2 ms floor makes the loop ring and the tip error climbs to 13.5 mm, against 1.96 mm with the right floor.
 - For MAESTRO (333 Hz frame, 1 kHz loop), D comes to 2.1 ms. The v4 video engine runs with a 2.22 ms floor, the TH41-A limit at 1 kHz, which sits just above D.
@@ -19,7 +19,7 @@ The scripts are in `bench/scripts/`: `flow_v6_rate.py` runs the loop at 2 kHz (w
 - In v6 and v7 only the loop rate changes. The servo PWM frame stays at 333 Hz (every 3 ms) and carries the plan plus the latest correction. The noise per encoder read does not change, since the AS5048A refreshes at 10.2 to 12.4 kHz, and every time constant is kept in seconds. The noise term already carries dt, as the corpus states it: sigma^2 is the per-read variance times dt (in the code, s2 = 0.5 n2 dt).
 - The PID with interpolation and the best fixed window are re-tuned at each rate on the v5 grids. At 500 and 333 Hz the derivative gain hit the top of its grid, so both were re-tuned on a wider grid; the PID improved by at most 2 %.
 - The syntonic engine runs the v5 code unchanged, with nothing tuned.
-- Every script first reproduces v5c to the digit (1 kHz loop, 3 ms frame, 2 ms floor).
+- Each script first checks that it reproduces v5c with the original settings (1 kHz loop, 3 ms frame, 2 ms floor) before changing anything.
 
 ## v10: parity with PID over ten paired noise draws
 
@@ -48,13 +48,13 @@ This came up while building the open example. Every run above is scored on the b
 | B steady | 1.193 / 1.275 (x1.07) | 0.0489 / 0.0627 (x1.28) |
 | B noise x10 | 1.631 / 1.450 (x0.89) | 0.0674 / 0.0701 (x1.04) |
 
-- Joint by joint, the tuned PID is about 28 % tighter under steady noise. That is the error its gains were chosen to minimise.
-- Every joint moves the tip. The median lever, in mm per degree, is 5.2 for RJ1, 13.3 for RJ2, 13.0 for RJ3, 8.9 for RJ4, 12.0 for RJ5 and 8.2 for RJ6. Weighting the joint errors by these levers, as if they were independent, predicts a syntonic tip error about 25 % above the PID's. The measured tip error is only 0 to 7 % above. So the syntonic engine's joint errors partly cancel at the tip, while the PID's do not: on A, the independent estimate for the PID is 0.759 mm and the measured value 0.732 mm. We do not yet know why the syntonic errors cancel.
+- Joint by joint, the syntonic engine's error is about 28 % larger than the tuned PID's under steady noise. That is the error the PID's gains were chosen to minimise.
+- Every joint moves the tip. The median lever, in mm per degree, is 5.2 for RJ1, 13.3 for RJ2, 13.0 for RJ3, 8.9 for RJ4, 12.0 for RJ5 and 8.2 for RJ6. Weighting the joint errors by these levers, as if they were independent, predicts a syntonic tip error about 25 % above the PID's. The measured tip error is only 0 to 7 % above. So the syntonic engine's joint errors largely cancel at the tip, while the PID's do not: on A, the independent estimate for the PID is 0.759 mm and the measured value 0.732 mm. We do not yet know why the syntonic errors cancel.
 - What can be said in public: on par with the tuned PID at the baton tip under steady noise, better at the tip when the noise jumps, and on joint angles the tuned PID is tighter under steady noise.
 
 ## Loop rate (v6 and v7): tip error rms, mm
 
-PID against the syntonic engine with a 2 ms floor:
+PID against the syntonic engine with a 2 ms floor (each cell reads PID / syntonic):
 
 | Loop | A steady | A noise x10 | B steady | B noise x10 |
 |---|---|---|---|---|
@@ -125,7 +125,7 @@ Loop and plant at 1 kHz, declared before the run. The servo frame is set to 2, 3
 The engine used in these runs is published with this note under the Apache 2.0 licence, in three languages that give the same numbers:
 
 - Python (`python/syntonic_engine`), extracted from the bench engine and checked to be identical to it: zero difference in joint angles and windows over 33 s on all twelve joints.
-- C++ (`cpp/SyntonicEngine.h`), a single header for Arduino and Teensy, which agrees with the Python engine to 1.5e-14 rad over the same run.
-- Rust (`rust/`), a `no_std` crate without allocation, which agrees with the Python engine to 5.4e-14 rad over a 33 s replay.
+- C++ (`cpp/SyntonicEngine.h`), a single header for Arduino and Teensy, which agrees with the Python engine to 1.5e-14 rad on a 33 s, 12-joint replay (`cpp/tests/replay.cpp`).
+- Rust (`rust/`), a `no_std` crate without allocation, which agrees with the Python engine to 5.4e-14 rad on the same replay.
 
 `examples/servo_bench.py` reproduces the tip and joint scores of the "Tip against joints" table without the MAESTRO 1 simulation model. Neither the C++ header nor the Rust crate has run on a microcontroller yet.
