@@ -5,7 +5,7 @@
 Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal  
 ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549690.svg)](https://doi.org/10.5281/zenodo.23549690)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549689.svg)](https://doi.org/10.5281/zenodo.23549689)
 
 ![MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine](docs/media/maestro1_conducting.gif)
 
@@ -141,7 +141,7 @@ docs/bench_note.md        the bench note: setup, the predictions written before 
 
 If you use this work, please credit me (see NOTICE and CITATION.cff):
 
-- this software: J.-P. Bronsard, *Syntonic Engine* v0.1.0, Zenodo, https://doi.org/10.5281/zenodo.23549690
+- this software: J.-P. Bronsard, *Syntonic Engine*, Zenodo, https://doi.org/10.5281/zenodo.23549689 (this DOI always points to the latest version; each release also has its own DOI on Zenodo)
 - the theory: J.-P. Bronsard, *The Syntony Principle*, Zenodo, https://doi.org/10.5281/zenodo.17254395
 
 ## Licence

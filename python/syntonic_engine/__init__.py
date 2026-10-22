@@ -3,5 +3,5 @@
 """Syntonic engine: joint correction with a time window from Theorem U' of the Syntony Principle (nothing tuned)."""
 from .engine import SyntonicEngine, kappa_H, loop_delay, window_floor
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __all__ = ['SyntonicEngine', 'kappa_H', 'loop_delay', 'window_floor']
