@@ -5,6 +5,8 @@
 Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal  
 ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549690.svg)](https://doi.org/10.5281/zenodo.23549690)
+
 ---
 
 I wrote this engine for MAESTRO 1, a two-arm robot conductor. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned.
@@ -122,7 +124,9 @@ docs/bench_note.md        the bench note: setup, the predictions written before 
 ## Citing
 
 If you use this work, please credit me (see NOTICE and CITATION.cff):
-J.-P. Bronsard, *The Syntony Principle*, Zenodo, https://doi.org/10.5281/zenodo.17254395
+
+- this software: J.-P. Bronsard, *Syntonic Engine* v0.1.0, Zenodo, https://doi.org/10.5281/zenodo.23549690
+- the theory: J.-P. Bronsard, *The Syntony Principle*, Zenodo, https://doi.org/10.5281/zenodo.17254395
 
 ## Licence
 
