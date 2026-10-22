@@ -2,7 +2,7 @@
 
 **A joint correction loop for robots whose time window comes from the Syntony Principle, with nothing tuned.**
 
-Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal  
+Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal QC Canada  
 ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549689.svg)](https://doi.org/10.5281/zenodo.23549689)
