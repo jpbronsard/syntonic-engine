@@ -7,9 +7,9 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23549689.svg)](https://doi.org/10.5281/zenodo.23549689)
 
-[![MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine](docs/media/maestro1_conducting.gif)](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4)
+[![MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation rendered in Blender, every arm joint driven by this engine](docs/media/maestro1_conducting_blender.gif)](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.1/MAESTRO1_Syntonic_Conductor_v4_1m27_blender.mp4)
 
-*MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB, CC BY-SA 4.0).*
+*MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, rendered in Blender, every arm joint driven by this engine. Seven seconds from the 1:27 cut: [watch the 1:27](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.1/MAESTRO1_Syntonic_Conductor_v4_1m27_blender.mp4) (1080p, 76 MB). The whole performance, rendered in MuJoCo: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB). Both CC BY-SA 4.0.*
 
 ---
 
