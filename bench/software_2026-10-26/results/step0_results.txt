@@ -1,0 +1,101 @@
+step0_uprime_engine.py  sha256 7d1d419d85aee4653932ba996a2fdfb66c5008888073a305fdebb5bc867ee6a0
+H=0.30 done, 16 s
+H=0.50 done, 31 s
+H=0.70 done, 45 s
+H=0.85 done, 62 s
+H=0.95 done, 76 s
+
+=== STEP 0 results (sha256 7d1d419d85ae) ===
+
+H = 0.30   alpha_U' = 0.625   measured slope = 0.635 +/- 0.004   H1 PASS
+  level  tau_U'    tau_opt    tau_eng/tau_opt   regret    H_eng      H2    H3    H4
+      0     5.0 ms     4.6 ms     1.09          0.006    0.30     ok    ok    ok 
+      1     8.9 ms     8.5 ms     1.07          0.010    0.29     ok    ok    ok 
+      2    15.9 ms    15.3 ms     1.15          0.059    0.24     ok    ok    ok 
+      3    28.3 ms    27.6 ms     1.73          0.303    0.14     NO    NO    NO 
+      4    50.4 ms    49.4 ms     2.05          0.398    0.06     NO    NO    NO 
+      5    89.8 ms    87.4 ms     1.41          0.333    0.05     ok    NO    NO 
+      6   160.0 ms   158.9 ms     0.93          0.373    0.06     ok    NO    NO 
+
+H = 0.50   alpha_U' = 0.500   measured slope = 0.501 +/- 0.003   H1 PASS
+  level  tau_U'    tau_opt    tau_eng/tau_opt   regret    H_eng      H2    H3    H4
+      0     5.0 ms     5.0 ms     1.02          0.009    0.51     ok    ok    ok 
+      1     8.9 ms     8.9 ms     1.05          0.017    0.46     ok    ok    ok 
+      2    15.9 ms    15.9 ms     1.23          0.176    0.34     ok    NO    NO 
+      3    28.3 ms    28.1 ms     2.13          0.998    0.12     NO    NO    NO 
+      4    50.4 ms    50.8 ms     2.14          1.068    0.05     NO    NO    NO 
+      5    89.8 ms    90.6 ms     1.68          0.627    0.05     NO    NO    NO 
+      6   160.0 ms   159.6 ms     0.96          0.676    0.05     ok    NO    NO 
+
+H = 0.70   alpha_U' = 0.417   measured slope = 0.416 +/- 0.004   H1 PASS
+  level  tau_U'    tau_opt    tau_eng/tau_opt   regret    H_eng      H2    H3    H4
+      0     5.0 ms     5.1 ms     1.00          0.012    0.69     ok    ok    ok 
+      1     8.9 ms     9.1 ms     1.03          0.018    0.58     ok    ok    NO 
+      2    15.9 ms    16.0 ms     1.33          0.901    0.36     ok    NO    NO 
+      3    28.3 ms    28.4 ms     3.04          4.024    0.09     NO    NO    NO 
+      4    50.4 ms    50.9 ms     2.85          3.822    0.05     NO    NO    NO 
+      5    89.8 ms    92.1 ms     1.31          0.857    0.06     ok    NO    NO 
+      6   160.0 ms   162.4 ms     0.88          0.842    0.05     ok    NO    NO 
+
+H = 0.85   alpha_U' = 0.370   measured slope = 0.371 +/- 0.002   H1 PASS
+  level  tau_U'    tau_opt    tau_eng/tau_opt   regret    H_eng      H2    H3    H4
+      0     5.0 ms     5.2 ms     0.98          0.010    0.76     ok    ok    ok 
+      1     8.9 ms     9.3 ms     1.04          0.017    0.59     ok    ok    NO 
+      2    15.9 ms    16.4 ms     1.44          0.392    0.33     ok    NO    NO 
+      3    28.3 ms    29.1 ms     3.06          6.607    0.09     NO    NO    NO 
+      4    50.4 ms    52.7 ms     2.57          4.380    0.05     NO    NO    NO 
+      5    89.8 ms    92.8 ms     1.39          1.939    0.05     ok    NO    NO 
+      6   160.0 ms   168.8 ms     0.92          1.035    0.05     ok    NO    NO 
+
+H = 0.95   alpha_U' = 0.345   measured slope = 0.346 +/- 0.002   H1 PASS
+  level  tau_U'    tau_opt    tau_eng/tau_opt   regret    H_eng      H2    H3    H4
+      0     5.0 ms     5.5 ms     1.01         -0.008    0.83     ok    ok    NO 
+      1     8.9 ms     9.6 ms     1.12          0.020    0.61     ok    ok    NO 
+      2    15.9 ms    17.3 ms     1.62          5.236    0.28     NO    NO    NO 
+      3    28.3 ms    30.7 ms     3.41         10.607    0.08     NO    NO    NO 
+      4    50.4 ms    55.3 ms     2.57          7.805    0.05     NO    NO    NO 
+      5    89.8 ms    97.5 ms     1.36          1.441    0.05     ok    NO    NO 
+      6   160.0 ms   176.1 ms     0.79          1.348    0.05     ok    NO    NO 
+
+Summary: {
+"0.30": {
+"H1": true,
+"H2": false,
+"H3": false,
+"H4": false,
+"slope": 0.6347422774418348,
+"slope_se": 0.00411348446942906
+},
+"0.50": {
+"H1": true,
+"H2": false,
+"H3": false,
+"H4": false,
+"slope": 0.5005864479442154,
+"slope_se": 0.0034712599345108463
+},
+"0.70": {
+"H1": true,
+"H2": false,
+"H3": false,
+"H4": false,
+"slope": 0.41592407375528256,
+"slope_se": 0.003870956861658187
+},
+"0.85": {
+"H1": true,
+"H2": false,
+"H3": false,
+"H4": false,
+"slope": 0.37134706407392637,
+"slope_se": 0.0023409470661631573
+},
+"0.95": {
+"H1": true,
+"H2": false,
+"H3": false,
+"H4": false,
+"slope": 0.34554073276112846,
+"slope_se": 0.0021393862709757692
+}
+}

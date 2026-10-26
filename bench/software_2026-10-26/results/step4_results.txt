@@ -1,0 +1,15 @@
+step4_drift.py  sha256 e5adce2e4ea870ada1396f0b706e19c3af0b286d79bd772260a832fcf4161244
+oracles done, 2 s
+engines done, 35 s
+hardened bank 1s done, 226 s
+hardened bank 4s done, 411 s
+
+=== STEP 4 (sha e5adce2e4ea8): drift; regret vs the local 5 s oracle, mean over 10 seeds ===
+  T_e     H      ENGINE   ENGINE_META   HARD_1s   HARD_4s   FIXED_BEST   fires/stream(1s, 4s)
+    10 s  0.50    +0.071    +0.066       +0.087    +0.076    +0.126         0.3   0.3
+    10 s  0.85    +0.070    +0.065       -0.038    -0.033    +0.139         0.3   0.3
+     2 s  0.50    +0.573    +0.738       +0.455    +0.337    +0.497        12.2  12.2
+     2 s  0.85    +0.410    +0.540       +0.318    +0.241    +0.591        12.2  12.2
+
+R1 detector quiet under drift: FAIL
+R2a META helps in fast drift: FAIL   R2b parity with the better memory: FAIL   R2c beats the worse memory in 0/4 cells: FAIL

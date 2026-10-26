@@ -1,0 +1,120 @@
+rerun_engine_v020.py sha256 9b29274d5b7f
+
+=== step 0b / step 1 engine rows (0.2.0 identification) ===
+H     level: tau_eng/tau_opt  regret | step1 C3 ratio ENGINE/minKF (new) [old]
+H 0.30: 1.08/+0.010 | 1.010 [1.017]   1.03/+0.019 | 1.018 [1.023]   0.98/+0.028 | 1.027 [1.028]   0.97/+0.033 | 1.031 [1.031]   0.97/+0.036 | 1.034 [1.034]   0.97/+0.034 | 1.029 [1.029]   0.95/+0.039 | 1.033 [1.033]
+H 0.50: 1.00/+0.009 | 1.006 [1.013]   1.00/+0.016 | 1.012 [1.019]   1.00/+0.028 | 1.025 [1.031]   0.99/+0.045 | 1.041 [1.043]   0.96/+0.049 | 1.044 [1.044]   0.98/+0.051 | 1.045 [1.045]   1.04/+0.048 | 1.036 [1.035]
+H 0.70: 0.99/+0.008 | 1.000 [1.011]   1.01/+0.016 | 1.009 [1.018]   1.03/+0.028 | 1.023 [1.029]   0.98/+0.036 | 1.030 [1.034]   0.95/+0.044 | 1.038 [1.038]   0.94/+0.045 | 1.040 [1.040]   0.93/+0.065 | 1.052 [1.052]
+H 0.85: 1.01/+0.000 | 1.052 [1.064]   1.03/+0.008 | 1.046 [1.054]   1.06/+0.013 | 1.058 [1.061]   1.07/+0.013 | 1.081 [1.082]   1.03/+0.015 | 1.077 [1.077]   1.03/+0.020 | 1.077 [1.077]   1.03/+0.021 | 1.030 [1.030]
+H 0.95: 1.03/-0.019 | 1.338 [1.360]   1.05/-0.018 | 1.354 [1.370]   1.04/-0.011 | 1.331 [1.341]   1.03/+0.000 | 1.348 [1.349]   0.99/+0.009 | 1.348 [1.348]   1.00/+0.003 | 1.370 [1.370]   0.98/+0.032 | 1.273 [1.273]
+worst over 35 cells: tau ratio range 0.93..1.08, regret 0.065, ENGINE/minKF 1.370
+[70 s]
+
+=== step 2 (seeds 100-109): engine rows (0.2.0) against stored banks ['IMM_1s', 'IMM_4s'] ===
+  ENGINE: cell results (adapt_excess, recovery) vs banks; T1 steady regret
+    J1 0.5: steady +0.066/+0.042/+0.042 (old engine +0.074/+0.042/+0.041)
+    J1 0.85: steady +0.039/+0.017/+0.026 (old engine +0.042/+0.017/+0.025)
+    J2 0.5: steady +0.066/+0.041/+0.042 (old engine +0.074/+0.041/+0.041)
+    J2 0.85: steady +0.039/+0.022/+0.026 (old engine +0.042/+0.022/+0.025)
+    J3 0.5: steady +0.066/+0.013/+0.044 (old engine +0.074/+0.044/+0.044)
+    J3 0.85: steady +0.039/+0.002/+0.013 (old engine +0.042/+0.030/+0.013)
+    J4 None: steady +0.066/+0.031/+0.043 (old engine +0.074/+0.031/+0.041)
+  ENGINE: wins {'IMM_1s': 8, 'IMM_4s': 14}, bank wins {'IMM_1s': 2, 'IMM_4s': 0}, T1 PASS
+      ('J1', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.059, 0.6)
+      ('J1', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, -0.02, 0.61)
+      ('J1', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.006, 0.51)
+      ('J1', 0.85, 2, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, 0.023, 0.61)
+      ('J2', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.064, 0.59)
+      ('J2', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.171, 0.73)
+      ('J2', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.008, 0.51)
+      ('J2', 0.85, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.214, 0.68)
+      ('J3', 0.5, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, 0.133, 0.56)
+      ('J3', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.075, 0.71)
+      ('J3', 0.85, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, 0.112, 0.52)
+      ('J3', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, 0.197, 1.03)
+      ('J4', None, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, 0.004, 0.6)
+      ('J4', None, 2, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, -0.047, 0.59)
+[88 s]
+
+=== step 2 replication (seeds 200-209): engine rows (0.2.0) against stored banks ['IMM_1s', 'IMM_4s'] ===
+  ENGINE: cell results (adapt_excess, recovery) vs banks; T1 steady regret
+    J1 0.5: steady +0.057/+0.044/+0.023 (old engine +0.060/+0.044/+0.023)
+    J1 0.85: steady +0.031/+0.040/+0.017 (old engine +0.031/+0.040/+0.018)
+    J2 0.5: steady +0.057/+0.061/+0.023 (old engine +0.060/+0.061/+0.023)
+    J2 0.85: steady +0.031/+0.049/+0.017 (old engine +0.031/+0.049/+0.018)
+    J3 0.5: steady +0.057/+0.016/+0.035 (old engine +0.060/+0.043/+0.036)
+    J3 0.85: steady +0.031/+0.009/+0.014 (old engine +0.031/+0.040/+0.015)
+    J4 None: steady +0.057/+0.036/+0.032 (old engine +0.060/+0.036/+0.031)
+  ENGINE: wins {'IMM_1s': 10, 'IMM_4s': 12}, bank wins {'IMM_1s': 4, 'IMM_4s': 0}, T1 PASS
+      ('J1', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.067, 0.71)
+      ('J1', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, -0.054, 0.68)
+      ('J1', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, -0.07, 0.59)
+      ('J1', 0.85, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, -0.101, 0.66)
+      ('J2', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.031, 0.69)
+      ('J2', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.122, 0.82)
+      ('J2', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, -0.096, 0.59)
+      ('J2', 0.85, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.088, 0.85)
+      ('J3', 0.5, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'}, 0.165, 0.89)
+      ('J3', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.083, 0.78)
+      ('J3', 0.85, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'}, 0.095, 1.07)
+      ('J3', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, 0.121, 0.87)
+      ('J4', None, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.158, 0.86)
+      ('J4', None, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, -0.059, 0.63)
+[107 s]
+
+=== step 3 / 3c hardened banks, with META: engine rows (0.2.0) against stored banks ['IMM_1s', 'IMM_4s'] ===
+  ENGINE: cell results (adapt_excess, recovery) vs banks; T1 steady regret
+    J1 0.5: steady +0.066/+0.042/+0.042 (old engine +0.074/+0.042/+0.041)
+    J1 0.85: steady +0.039/+0.017/+0.026 (old engine +0.042/+0.017/+0.025)
+    J2 0.5: steady +0.066/+0.041/+0.042 (old engine +0.074/+0.041/+0.041)
+    J2 0.85: steady +0.039/+0.022/+0.026 (old engine +0.042/+0.022/+0.025)
+    J3 0.5: steady +0.066/+0.013/+0.044 (old engine +0.074/+0.044/+0.044)
+    J3 0.85: steady +0.039/+0.002/+0.013 (old engine +0.042/+0.030/+0.013)
+    J4 None: steady +0.066/+0.031/+0.043 (old engine +0.074/+0.031/+0.041)
+  ENGINE: wins {'IMM_1s': 5, 'IMM_4s': 10}, bank wins {'IMM_1s': 6, 'IMM_4s': 3}, T1 PASS
+      ('J1', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.059, 0.6)
+      ('J1', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'}, -0.02, 0.61)
+      ('J1', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.006, 0.51)
+      ('J1', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 0.023, 0.61)
+      ('J2', 0.5, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.064, 0.59)
+      ('J2', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 0.171, 0.73)
+      ('J2', 0.85, 1, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.008, 0.51)
+      ('J2', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 0.214, 0.68)
+      ('J3', 0.5, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, 0.133, 0.56)
+      ('J3', 0.5, 2, {'IMM_1s': 'ENGINE', 'IMM_4s': 'ENGINE'}, 0.075, 0.71)
+      ('J3', 0.85, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, 0.112, 0.52)
+      ('J3', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE'}, 0.197, 1.03)
+      ('J4', None, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, 0.004, 0.6)
+      ('J4', None, 2, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE'}, -0.047, 0.59)
+  ENGINE_META: cell results (adapt_excess, recovery) vs banks; T1 steady regret
+    J1 0.5: steady +0.068/+0.043/+0.041 (old engine +0.074/+0.042/+0.041)
+    J1 0.85: steady +0.037/+0.021/+0.024 (old engine +0.042/+0.017/+0.025)
+    J2 0.5: steady +0.068/+0.044/+0.041 (old engine +0.074/+0.041/+0.041)
+    J2 0.85: steady +0.037/+0.024/+0.026 (old engine +0.042/+0.022/+0.025)
+    J3 0.5: steady +0.068/+0.015/+0.046 (old engine +0.074/+0.044/+0.044)
+    J3 0.85: steady +0.037/+0.003/+0.014 (old engine +0.042/+0.030/+0.013)
+    J4 None: steady +0.068/+0.034/+0.043 (old engine +0.074/+0.031/+0.041)
+  ENGINE_META: wins {'IMM_1s': 6, 'IMM_4s': 10}, bank wins {'IMM_1s': 6, 'IMM_4s': 3}, T1 PASS
+      ('J1', 0.5, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, 0.048, 0.62)
+      ('J1', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'}, -0.037, 0.69)
+      ('J1', 0.85, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, -0.004, 0.5)
+      ('J1', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 0.022, 0.72)
+      ('J2', 0.5, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, 0.051, 0.6)
+      ('J2', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 1.473, 2.14)
+      ('J2', 0.85, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, 0.005, 0.5)
+      ('J2', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'}, 2.145, 2.29)
+      ('J3', 0.5, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE_META'}, 0.125, 0.56)
+      ('J3', 0.5, 2, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, 0.073, 0.71)
+      ('J3', 0.85, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE_META'}, 0.115, 0.52)
+      ('J3', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE_META'}, 0.195, 1.08)
+      ('J4', None, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'}, -0.002, 0.6)
+      ('J4', None, 2, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE_META'}, -0.045, 0.6)
+[151 s]
+
+=== step 4 drift: engine rows (0.2.0) ===
+  T_e   H     ENGINE new [old]   META new [old]   HARD_1s  HARD_4s
+    10  0.50   +0.064 [+0.071]     +0.060 [+0.066]    +0.087   +0.076
+    10  0.85   +0.066 [+0.070]     +0.061 [+0.065]    -0.038   -0.033
+     2  0.50   +0.573 [+0.573]     +0.935 [+0.738]    +0.455   +0.337
+     2  0.85   +0.400 [+0.410]     +0.563 [+0.540]    +0.318   +0.241
+[189 s]

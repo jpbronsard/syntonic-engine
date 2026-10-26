@@ -1,0 +1,77 @@
+step3c_meta_noise.py  sha256 f214d0f0c1b63e5687c3b57597691b036766dc2b4986e47370607dc1a5d6f42e
+done computing, 70 s
+
+=== STEP 3c (sha f214d0f0c1b6): engine with META noise estimator vs hardened banks; means over 10 seeds ===
+
+J1  H=0.50
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.077 / +0.043 / +0.040         +0.095  +0.051   0.62           -0.000  -0.038   0.69
+  ENGINE       +0.074 / +0.042 / +0.041         +0.104  +0.060   0.60           +0.021  -0.019   0.61
+  IMM_1s       +0.029 / +0.060 / +0.030         +0.178  +0.113   0.64           -0.011  -0.040   0.59
+  IMM_4s       +0.005 / +0.011 / +0.006         +0.150  +0.137   0.64           -0.010  -0.016   0.60
+  FIXED_A      +0.000 / +0.250 / +0.005         +0.267  +0.016   0.60           -0.043  -0.048   0.59
+
+J1  H=0.85
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.041 / +0.021 / +0.023         +0.017  -0.002   0.50           +0.043  +0.021   0.62
+  ENGINE       +0.042 / +0.017 / +0.025         +0.022  +0.006   0.51           +0.048  +0.025   0.61
+  IMM_1s       -0.088 / -0.122 / -0.041         -0.030  +0.120   0.64           -0.106  -0.077   0.59
+  IMM_4s       -0.079 / -0.147 / -0.037         -0.019  +0.168   0.64           -0.098  -0.072   0.59
+  FIXED_A      +0.000 / +0.201 / +0.009         +0.196  -0.012   0.50           +0.043  +0.034   0.62
+
+J2  H=0.50
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.077 / +0.044 / +0.042         +0.100  +0.058   0.60           +1.374  +1.280   2.13
+  ENGINE       +0.074 / +0.041 / +0.041         +0.103  +0.064   0.59           +0.219  +0.172   0.73
+  IMM_1s       +0.029 / +0.105 / +0.030         +0.242  +0.130   0.64           +0.078  +0.046   0.60
+  IMM_4s       +0.005 / +0.017 / +0.006         +0.202  +0.187   0.64           +0.081  +0.074   0.61
+  FIXED_A      +0.000 / +1.076 / +0.005         +1.082  +0.008   0.58           -0.029  -0.034   0.59
+
+J2  H=0.85
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.041 / +0.024 / +0.025         +0.031  +0.011   0.50           +2.123  +2.049   2.26
+  ENGINE       +0.042 / +0.022 / +0.025         +0.025  +0.008   0.51           +0.243  +0.216   0.68
+  IMM_1s       -0.088 / -0.091 / -0.041         +0.039  +0.167   0.62           +0.001  +0.031   0.59
+  IMM_4s       -0.079 / -0.144 / -0.037         +0.021  +0.229   0.82           +0.039  +0.066   0.60
+  FIXED_A      +0.000 / +0.782 / +0.009         +0.788  -0.009   0.50           +0.065  +0.056   0.62
+
+J3  H=0.50
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.077 / +0.046 / +0.045         +0.269  +0.212   0.56           +0.169  +0.122   0.76
+  ENGINE       +0.074 / +0.044 / +0.044         +0.275  +0.220   0.62           +0.167  +0.123   0.75
+  IMM_1s       +0.029 / +0.004 / +0.030         +0.055  +0.051   0.55           +0.174  +0.139   0.84
+  IMM_4s       +0.005 / +0.000 / +0.017         +0.170  +0.169   0.76           +0.635  +0.606   3.33
+  FIXED_A      +0.000 / +1.242 / +0.005         +1.247  +0.009   0.54           -0.032  -0.037   0.59
+
+J3  H=0.85
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.041 / +0.031 / +0.013         +0.166  +0.132   0.52           +0.246  +0.229   1.14
+  ENGINE       +0.042 / +0.030 / +0.013         +0.163  +0.130   0.52           +0.246  +0.230   1.14
+  IMM_1s       -0.088 / -0.102 / -0.041         -0.058  +0.047   0.54           +0.039  +0.079   0.78
+  IMM_4s       -0.079 / -0.093 / -0.022         +0.068  +0.173   0.78           +0.365  +0.402   1.62
+  FIXED_A      +0.000 / +1.537 / +0.009         +1.317  -0.049   0.54           +0.050  +0.041   0.62
+
+J4  H 0.50->0.85->0.50
+  method       steady regret A / B / A'      jump1: excess  adapt  recov(s)     jump2: excess  adapt  recov(s)
+  ENGINE_META  +0.077 / +0.034 / +0.041         +0.037  -0.002   0.57           -0.007  -0.044   0.60
+  ENGINE       +0.074 / +0.031 / +0.041         +0.041  +0.006   0.60           -0.008  -0.044   0.59
+  IMM_1s       +0.029 / -0.074 / +0.030         -0.068  -0.001   0.69           -0.004  -0.033   0.59
+  IMM_4s       +0.005 / -0.084 / +0.005         +0.036  +0.129   0.65           +0.041  +0.036   0.60
+  FIXED_A      +0.000 / +0.239 / +0.005         +0.168  -0.062   0.51           -0.045  -0.050   0.59
+
+M1 steady state not worse than ENGINE (+0.02): PASS
+T3m cells (14): ENGINE_META wins {'IMM_1s': 6, 'IMM_4s': 9}, hardened bank wins {'IMM_1s': 6, 'IMM_4s': 3}, rest ties  ->  outcome: MATCHES
+    ('J1', 0.5, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J1', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'})
+    ('J1', 0.85, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J1', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'})
+    ('J2', 0.5, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J2', 0.5, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'})
+    ('J2', 0.85, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J2', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'IMM_4s'})
+    ('J3', 0.5, 1, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'tie'})
+    ('J3', 0.5, 2, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J3', 0.85, 1, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE_META'})
+    ('J3', 0.85, 2, {'IMM_1s': 'IMM_1s', 'IMM_4s': 'ENGINE_META'})
+    ('J4', None, 1, {'IMM_1s': 'ENGINE_META', 'IMM_4s': 'ENGINE_META'})
+    ('J4', None, 2, {'IMM_1s': 'tie', 'IMM_4s': 'ENGINE_META'})

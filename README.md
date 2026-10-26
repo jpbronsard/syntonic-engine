@@ -64,7 +64,7 @@ The two identifications on the MAESTRO 1 joint bench (the table below, `python e
 
 In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` reproduces the 0.1.x results bit for bit (the example and the replay tool use it for that reason). All three implementations carry both identifications, selected by `identification` in Python, `Config::identification` in C++ (`syntonic::ALLAN` or `syntonic::RAW`) and in Rust (`Identification::Allan` or `Identification::Raw`).
 
-The complete software bench (scripts with pre-registered hypotheses, SHA-256 of each script, tables) is in the bench note of 26 October 2026 in the project; its headline beyond the fix above: against Bayesian Kalman banks the engine is at parity in stationary and slowly drifting regimes, better after sensor-noise increases, behind after noise decreases and fast drift, and a constant-velocity Kalman beats any first-order window by 25 % on smooth targets (H >= 0.85). The engine does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
+The complete software bench (scripts with pre-registered hypotheses, SHA-256 of each script, tables, per-seed rows and the bench note) is in `bench/software_2026-10-26/`; its headline beyond the fix above: against Bayesian Kalman banks the engine is at parity in stationary and slowly drifting regimes, better after sensor-noise increases, behind after noise decreases and fast drift, and a constant-velocity Kalman beats any first-order window by 25 % on smooth targets (H >= 0.85). The engine does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
 
 ## Quick start in Python
 
@@ -154,8 +154,9 @@ python/syntonic_engine/   the engine (numpy), with unit tests in python/tests/
 cpp/SyntonicEngine.h      the engine as a single C++ header (both identifications), with a replay test in cpp/tests/
 rust/                     the engine as a no_std Rust crate, with a replay check against Python
 examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
-bench/                    the full bench scripts and every result file; the scripts need the MAESTRO 1
-                          simulation model, which is not included, but all results are
+bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
+                          simulation model, which is not included, but all results are), and the software bench
+                          of 26 Oct 2026 against adaptive estimators (software_2026-10-26/, self-contained)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 
