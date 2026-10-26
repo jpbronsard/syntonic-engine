@@ -19,7 +19,7 @@ TAU_S, W0 = Z['stall_torque'], Z['no_load_speed']; ENC_SD, ENC_LSB = float(Z['en
 t0 = float(Z['A_t0']); tt = np.arange(t0 - 3.0, t0 + 30.0, DT)
 q = CubicSpline(Z['A_t30'], Z['A_q30'], axis=0)(tt); tau = CubicSpline(Z['A_t30'], Z['A_tau30'], axis=0)(tt)
 rng = np.random.default_rng(5); J = 12
-eng = SyntonicEngine(q[0], DT, 0.003, W0)
+eng = SyntonicEngine(q[0], DT, 0.003, W0, identification='raw')   # the C++ and Rust ports implement the raw identification
 th_g = q[0].copy(); rows = []
 for k in range(len(tt)):
     load = tau[k]

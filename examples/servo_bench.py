@@ -44,8 +44,9 @@ def run(engine, name, cond, seed):
     if cond == 'noise step': sd[(tt >= t0 + 10) & (tt < t0 + 20)] *= np.sqrt(10.0)
     rng = np.random.default_rng(seed); J = q.shape[1]
     th_g = q[0].copy(); cmd = q[0].copy()
-    if engine == 'syntonic':
-        eng = SyntonicEngine(q[0], DT, FRAME, W0)                  # nothing tuned; floor = loop delay / TH41-A
+    if engine in ('syntonic', 'syntonic-allan'):
+        ident = 'raw' if engine == 'syntonic' else 'allan'       # 'raw': the identification of the Oct 2026 bench
+        eng = SyntonicEngine(q[0], DT, FRAME, W0, identification=ident)   # nothing tuned; floor = loop delay / TH41-A
     else:
         kp, ki, kd = (Z[f'{name}_pid'][:, i] for i in range(3))   # gains tuned on the rest of the movement
         I = np.zeros(J); ef = np.zeros(J); efp = np.zeros(J); corr = np.zeros(J)
@@ -55,7 +56,7 @@ def run(engine, name, cond, seed):
         th_out = th_g - load * K_INV - HB * np.tanh(load / (0.02 * TAU_S))
         a = np.round((th_out + rng.normal(0.0, 1.0, J) * sd[k]) / ENC_LSB) * ENC_LSB
         b = np.round((th_out + rng.normal(0.0, 1.0, J) * sd[k]) / ENC_LSB) * ENC_LSB
-        if engine == 'syntonic':
+        if engine in ('syntonic', 'syntonic-allan'):
             cmd = eng.step(q[k], a, b)
         else:
             e = q[k] - 0.5 * (a + b)
@@ -83,4 +84,7 @@ if __name__ == '__main__':
             pt, pj, pq = run('pid', name, cond, seed); st, sj, sq = run('syntonic', name, cond, seed)
             print(f'excerpt {name}, {cond:13s}   PID {pt:.3f}  syn {st:.3f}  x{st / pt:.3f}   PID {pj:.3f}  syn {sj:.3f}  x{sj / pj:.3f}'
                   f'   PID {pq.mean():.4f}  syn {sq.mean():.4f}  x{sq.mean() / pq.mean():.3f}', flush=True)
+            if '--allan' in sys.argv:                                   # the 0.2.0 default identification, for comparison
+                at, aj, aq = run('syntonic-allan', name, cond, seed)
+                print(f'{"":26s}allan: syn {at:.3f}  x{at / pt:.3f}{"":16s}syn {aj:.3f}  x{aj / pj:.3f}{"":17s}syn {aq.mean():.4f}  x{aq.mean() / pq.mean():.3f}', flush=True)
     print(f'done in {time.time() - t_start:.0f} s')

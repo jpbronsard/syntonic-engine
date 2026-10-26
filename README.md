@@ -29,7 +29,7 @@ On every loop tick, for every joint:
 
 1. Read the encoder twice. The difference between the two reads gives the noise, and their mean gives the measurement.
 2. Compare the measurement with a nominal model of the servo, driven by the plan and by the commands actually sent. What is left over is what the correction has to cancel. Measuring it this way keeps the engine from reading its own corrections back as motion.
-3. Track how that residual changes over lags of 2 to 64 ms, keeping only the lags that stand clear of the noise, and fit its smoothness H and intensity lambda_H.
+3. Track how that residual changes across time scales (its structure function), subtract what the read noise alone would produce, keep the finest scales that stand clear of the noise, and fit its smoothness H and intensity lambda_H. Since 0.2.0 this is done on the means of adjacent blocks of 2 ms to 4 s (the Allan-variance construction), which keeps the fit valid when the sensor is noisy; see *Two identifications* below.
 4. Compute the window from the formula, keep it between the floor described below and 0.5 s, and let it move smoothly.
 5. Integrate the error over that window and add the result to the planned position at each servo frame.
 
@@ -46,6 +46,25 @@ Three facts about your hardware. There is nothing to tune.
 The window floor follows from these. It is the loop delay (half a frame, plus half a tick, plus 0.1 ms for the sensor) or the discretisation limit dt / 0.45, whichever is larger. For a 1 kHz loop driving 333 Hz servos that comes to 2.22 ms. The formula leaves out the servo's own internal latency, so on real hardware measure the full loop delay once and, if it is larger, pass it as `floor`.
 
 Each encoder has to be read twice per tick, at least one internal sample apart so that the two reads carry independent noise. An AS5048 refreshes at about 11 kHz, so the reads should be about 0.1 ms apart, which fits easily in a 1 ms tick.
+
+## Two identifications, and where each is valid
+
+The 0.1.x engine measured the residual's structure function on the raw reads at lags of 2 to 64 ms. That is exact where the motion over 64 ms is far above the read noise, which is the case of the MAESTRO 1 joint bench (AS5048 encoders, conducting motion). It is not the case of a noisy sensor or a slow motion: a software bench on 26 October 2026 (fractional Brownian targets, H from 0.30 to 0.95, read noise placing the optimal window from 5 to 160 ms) found that as soon as the signal falls below the noise floor at 64 ms, the raw fit has no usable lag, H collapses to its clip and the window drifts by a factor of 2 to 3. The lag at which the signal clears the floor grows from 0.1 s to 100 s over that range, so no fixed raw-read lag set can cover it.
+
+Version 0.2.0 therefore identifies on **block means** by default (`identification='allan'`): the structure function of adjacent block means of length l, l from 2 ms to 4.096 s in powers of two. For white read noise its noise part is exactly n2 dt / l (n2 the per-read variance measured from the two reads) and is subtracted analytically; the signal part is lambda_H C(H) l^(2H) with C(H) = (2^(2H+2) - 4) / ((2H+1)(2H+2)), which is 2/3 at H = 1/2 (the Allan variance of a random walk). The fit uses the six finest scales that clear the floor, so that the scaling it measures is the local one, at the operating scale. On the software bench this lands within 7 % of the best fixed window in all 35 cells (regret at most 6.5 %), where the raw identification failed in 21 of them.
+
+The two identifications on the MAESTRO 1 joint bench (the table below, `python examples/servo_bench.py --allan` prints both):
+
+| Condition | Tip error, PID / raw / allan | Tip jitter, PID / raw / allan |
+|---|---|---|
+| A, steady noise | 0.732 / 0.734 (x1.00) / 0.749 (x1.02) | 0.651 / 0.561 (x0.86) / 0.603 (x0.93) |
+| A, noise step | 1.330 / 0.922 (x0.69) / 1.033 (x0.78) | 1.261 / 0.695 (x0.55) / 0.900 (x0.71) |
+| B, steady noise | 1.193 / 1.275 (x1.07) / 1.274 (x1.07) | 0.713 / 0.769 (x1.08) / 0.775 (x1.09) |
+| B, noise step | 1.631 / 1.450 (x0.89) / 1.487 (x0.91) | 1.284 / 0.958 (x0.75) / 1.056 (x0.82) |
+
+In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` reproduces the 0.1.x results bit for bit and is what the C++ and Rust ports implement (the example and the replay tool use it for that reason). Porting the block-mean identification to C++ and Rust is the next step.
+
+The complete software bench (scripts with pre-registered hypotheses, SHA-256 of each script, tables) is in the bench note of 26 October 2026 in the project; its headline beyond the fix above: against Bayesian Kalman banks the engine is at parity in stationary and slowly drifting regimes, better after sensor-noise increases, behind after noise decreases and fast drift, and a constant-velocity Kalman beats any first-order window by 25 % on smooth targets (H >= 0.85). The engine does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
 
 ## Quick start in Python
 
@@ -89,7 +108,7 @@ See `rust/README.md` for details.
 
 ## Results on the MAESTRO 1 joint bench (simulation)
 
-The bench simulates the twelve arm joints of MAESTRO 1 conducting the first movement of Beethoven's Fifth. Each joint has a servo model (333 Hz command frame, 25 ms internal loop, speed derating, compliance, gear play), AS5048 encoder noise, and loads from the inverse dynamics of the planned motion. The opponent is a PID with interpolation. Its gains were picked joint by joint from a grid of 280 (P, I, D) combinations, each tried on all twelve joints over the rest of the same movement with normal noise. Both run on two held-out 30 s excerpts, once with steady noise and once with the encoder noise variance raised tenfold for 10 s. The figures below are for the baton arm and come from `examples/servo_bench.py`. A ratio below 1 means the syntonic engine did better.
+These results were obtained with the raw identification (`identification='raw'`, the 0.1.x engine); the example reproduces them as printed. The bench simulates the twelve arm joints of MAESTRO 1 conducting the first movement of Beethoven's Fifth. Each joint has a servo model (333 Hz command frame, 25 ms internal loop, speed derating, compliance, gear play), AS5048 encoder noise, and loads from the inverse dynamics of the planned motion. The opponent is a PID with interpolation. Its gains were picked joint by joint from a grid of 280 (P, I, D) combinations, each tried on all twelve joints over the rest of the same movement with normal noise. Both run on two held-out 30 s excerpts, once with steady noise and once with the encoder noise variance raised tenfold for 10 s. The figures below are for the baton arm and come from `examples/servo_bench.py`. A ratio below 1 means the syntonic engine did better.
 
 | Condition | Tip error (mm), PID / syntonic | Tip jitter (mm), PID / syntonic | Joint error (deg), PID / syntonic |
 |---|---|---|---|
@@ -109,8 +128,9 @@ The window floor was tested on its own (`bench/`, runs v8 and v9). Set to the lo
 
 ## Checks
 
-- The Python engine in `python/syntonic_engine` reproduces the bench engine exactly: zero difference in joint angles and windows over 33 s on 12 joints.
-- On the same 33 s, 12-joint replay, the C++ header agrees with the Python engine to 1.5e-14 rad and the Rust crate to 5.4e-14 rad.
+- The Python engine in `python/syntonic_engine` with `identification='raw'` reproduces the bench engine exactly: zero difference in joint angles and windows over 33 s on 12 joints; a unit test pins it to the 0.1.1 numbers.
+- On the same 33 s, 12-joint replay (raw identification), the C++ header agrees with the Python engine to 1.5e-14 rad and the Rust crate to 5.4e-14 rad. The C++ and Rust ports do not yet have the block-mean identification.
+- The block-mean identification is unit-tested on a fractional Brownian target with read noise large enough to defeat the raw one (`python/tests`).
 - `examples/arm_fk.py`, the baton-tip kinematics in plain numpy, agrees with MuJoCo to 7e-16 m over 200 random poses.
 - Neither the C++ header nor the Rust crate has run on a microcontroller yet. The Rust crate builds as `no_std` but has not been cross-compiled for a Cortex-M board, and the Teensy sketch has only been compiled on a PC against stand-ins for the Arduino functions.
 
@@ -119,7 +139,7 @@ To run the checks yourself, from the repository root (Python 3.9 or later, a C++
 ```
 pip install -e python scipy
 python -m unittest discover -s python/tests          # unit tests of the Python engine
-python examples/servo_bench.py                       # the results table above, about a minute
+python examples/servo_bench.py                       # the results table above, about a minute; add --allan for both identifications
 python rust/tools/make_replay_log.py                 # writes replay_log.bin and replay_w0.bin
 g++ -O2 -std=c++11 -Icpp cpp/tests/replay.cpp -o replay_cpp && ./replay_cpp replay_log.bin replay_w0.bin
 cd rust && cargo test && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin
