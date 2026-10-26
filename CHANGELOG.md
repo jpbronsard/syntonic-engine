@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 (26 Oct 2026)
+
+Documentation only; the code is that of 0.2.0.
+
+- The statement says what the law does not decide: the loop gain. The window law is invariant under rescaling of the error, so the gain is outside it. On a servo joint it lives in the servo's own loop and the engine only moves the setpoint. On a bare plant such as a quadrotor a proportional gain remains; the SyntonicQuad flew with no PID but with that gain set by hand (0.25, 0.25, 0.20; 0.90 from angle to rate), and the meta-gain law written for it (measured control effectiveness B, g = G* / B) has not flown. The authority fact is therefore the data-sheet speed and reaction time on a servo and the measured B on a bare plant, with G* among the design constants that must carry unchanged across machines. README, "What is claimed, and what is not"; CITATION.cff.
+- What is common across substrates is the window law and its identification; where the first-order element sits (accumulated on a servo setpoint here, filtering the rate error under a gain on the quadrotor) is the substrate's, described by the authority fact.
+- The Rust crate's version string, left at 0.1.1 in 0.2.0, now matches.
+
 ## 0.2.0 (26 Oct 2026)
 
 - Identification on block means (the Allan-variance construction, scales 2 ms to 4.096 s, analytic noise floor n2 dt / l, constant C(H)), the new default `identification='allan'`. It fixes a limit of 0.1.x found by the software bench of 26 Oct 2026: with a noisy sensor or a slow motion, the signal falls below the read-noise floor at every lag up to 64 ms, the raw fit has no usable lag, H collapses and the window drifts by a factor of 2 to 3. With block means the engine lands within 7 % of the best fixed window in all 35 bench cells (fractional Brownian targets, H 0.30 to 0.95, optimal windows 5 to 160 ms).
@@ -7,7 +15,6 @@
 - `identification='raw'` keeps the 0.1.x arithmetic bit for bit (pinned by a unit test); `examples/servo_bench.py` and the raw replay use it, so the published tables and the earlier replay figures are unchanged. `servo_bench.py --allan` prints both identifications: in the servo regime the raw one stays a few percent better, mostly during the noise step (tip error ratios 1.02 / 0.78 / 1.07 / 0.91 against 1.00 / 0.69 / 1.07 / 0.89).
 - New `C_H(H)` in the public API; new unit tests of the identification.
 - The main statement changes. 0.1.x presented a joint correction loop for robots; 0.2.0 presents one formula with three machine facts and no tuning, at parity with hardened Bayesian Kalman banks within its class, and states the portability hypothesis (servo, quadrotor on a gimbal, human) with its pass criterion and its failure reading. `README.md`, section "What is claimed, and what is not".
-- The statement also says what the law does not decide: the loop gain. The window law is invariant under rescaling of the error, so the gain is outside it; on a servo it lives in the servo, on a bare plant it is the proportional gain the SyntonicQuad flew with (hand-set), to be replaced by the measured control effectiveness of the meta-gain law, with its loop-gain constant G* counted among the design constants that must carry unchanged across machines.
 - README: the validated domain of each identification, and the findings of the software bench against Bayesian Kalman banks (parity in stationary and slow-drift regimes; better after noise increases; behind after noise decreases and fast drift; 25 % behind a constant-velocity Kalman on smooth targets).
 
 ## 0.1.1 (22 Oct 2026)

@@ -16,7 +16,7 @@ authors:
     given-names: "Jean-Pierre"
     orcid: "https://orcid.org/0009-0008-6639-7553"
     affiliation: "SyntonicAI Recherche, Montréal, QC, Canada"
-version: "0.2.0"
+version: "0.2.1"
 doi: "10.5281/zenodo.23549689"
 url: "https://doi.org/10.5281/zenodo.23549689"
 date-released: 2026-10-26
