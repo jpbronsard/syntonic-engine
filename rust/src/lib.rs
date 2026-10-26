@@ -14,6 +14,12 @@
 //! where sigma^2 is the encoder noise per unit time and lambda_H, H describe how strongly and how smoothly the
 //! motion changes, all measured while the robot moves. The window never drops below the loop delay.
 //!
+//! Two identifications of (H, lambda_H), selected by `Config::identification`: `Allan` (default since 0.2.0),
+//! the structure function of the residual on the means of adjacent blocks of 2 ms to 4.096 s with the read-noise
+//! floor n2 dt / l subtracted analytically, valid whether the read noise is small or large; and `Raw` (the 0.1.x
+//! engine, bit for bit), the structure function of the raw residual at lags of 2 to 64 ms, valid where the motion
+//! over 64 ms is far above the read noise, as on the MAESTRO 1 joint bench.
+//!
 //! The crate is `no_std` and allocation-free (math from `libm`), so it runs on microcontrollers as well as on a PC.
 //!
 //! ```
@@ -49,9 +55,24 @@ pub fn window_floor(dt: f64, frame: f64, sensor_delay: f64) -> f64 {
     if d > t { d } else { t }
 }
 
+/// Block-mean (Allan) constant: E[(m2 - m1)^2] = lambda_H C(H) l^(2H) for adjacent block means of length l on a
+/// signal of structure function lambda_H u^(2H). C(1/2) = 2/3.
+pub fn c_h(h: f64) -> f64 {
+    (pow(2.0, 2.0 * h + 2.0) - 4.0) / ((2.0 * h + 1.0) * (2.0 * h + 2.0))
+}
+
 #[inline]
 fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
     if x < lo { lo } else if x > hi { hi } else { x }
+}
+
+/// Which structure function identifies (H, lambda_H).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Identification {
+    /// Block means, 2 ms to 4.096 s, analytic noise floor (default since 0.2.0).
+    Allan,
+    /// Raw residual at lags of 2 to 64 ms (the 0.1.x engine).
+    Raw,
 }
 
 /// Hardware facts and fixed design constants. Only `dt`, `frame` and `servo_tau` describe your hardware;
@@ -80,10 +101,16 @@ pub struct Config {
     pub warmup: f64,
     /// Correction limit (rad).
     pub limit: f64,
-    /// Structure-function lags (s); the first `nlags` are used.
+    /// Which identification (see the crate docs).
+    pub identification: Identification,
+    /// `Raw`: structure-function lags (s); the first `nlags` are used.
     pub lags: [f64; 8],
-    /// Number of lags used.
+    /// `Raw`: number of lags used. `Allan`: number of finest scales fitted among those that clear the floor.
     pub nlags: usize,
+    /// `Allan`: block lengths (s); the first `nscales` are used.
+    pub scales: [f64; 16],
+    /// `Allan`: number of block lengths used.
+    pub nscales: usize,
 }
 
 impl Default for Config {
@@ -100,8 +127,12 @@ impl Default for Config {
             ema: 1.0,
             warmup: 1.0,
             limit: 5.0 * core::f64::consts::PI / 180.0,
+            identification: Identification::Allan,
             lags: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.0, 0.0],
             nlags: 6,
+            scales: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128, 0.256, 0.512, 1.024, 2.048, 4.096,
+                     0.0, 0.0, 0.0, 0.0],
+            nscales: 12,
         }
     }
 }
@@ -136,6 +167,18 @@ pub struct Engine<const N: usize, const RING: usize = 129> {
     head: usize,
     k: u64,
     warm: u64,
+    // block-mean identification
+    sc: [usize; 16],
+    nsc: usize,
+    logs: [f64; 16],
+    ablk: [f64; 16],
+    cnt: [usize; 16],
+    hasprev: [bool; 16],
+    acc: [[f64; N]; 16],
+    prev: [[f64; N]; 16],
+    da: [[f64; N]; 16],
+    nblk: [[u32; N]; 16],
+    finest: usize,
 }
 
 impl<const N: usize, const RING: usize> Engine<N, RING> {
@@ -162,13 +205,70 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
         lag[..nl].sort_unstable();
         let mut logl = [0.0; 8];
         for i in 0..nl { logl[i] = log(lag[i] as f64 * dt); }
+        // block lengths in ticks: at least one, unique, ascending
+        let mut sc = [0usize; 16];
+        let mut nsc = 0usize;
+        for i in 0..cfg.nscales.min(16) {
+            let mut t = round(cfg.scales[i] / dt);
+            if t < 1.0 { t = 1.0; }
+            let t = t as usize;
+            if !sc[..nsc].contains(&t) { sc[nsc] = t; nsc += 1; }
+        }
+        assert!(nsc >= 2, "at least two distinct scales are needed");
+        sc[..nsc].sort_unstable();
+        let mut logs = [0.0; 16];
+        let mut ablk = [0.0; 16];
+        for i in 0..nsc {
+            logs[i] = log(sc[i] as f64 * dt);
+            let eight = 8.0 * dt * sc[i] as f64;
+            let b = dt * sc[i] as f64 / if cfg.ema > eight { cfg.ema } else { eight };   // at least 8 blocks
+            ablk[i] = if b < 1.0 { b } else { 1.0 };
+        }
         Engine {
             tau: [0.5; N], h: [0.5; N], u: [0.0; N], cmd: *q0, n2: [0.0; N],
             cfg, floor, aw: dt / cfg.ema, w0: *w0, thm: *q0, thff: *q0, tgt: [0.5; N],
             logl, lag, nl, maxlag: lag[nl - 1], frame_every,
             dk: [[0.0; N]; 8], hist: [[0.0; N]; RING], head: 0, k: 0,
             warm: round(cfg.warmup / dt) as u64,
+            sc, nsc, logs, ablk, cnt: [0; 16], hasprev: [false; 16],
+            acc: [[0.0; N]; 16], prev: [[0.0; N]; 16], da: [[0.0; N]; 16], nblk: [[0; N]; 16],
+            finest: cfg.nlags,
         }
+    }
+
+    /// Log-log fit of the noise-corrected structure function `d` over the scales that clear the floor `fl` by
+    /// `snr_gate` (fallback: all positive); with `finest > 0`, only the finest that many of them. Returns
+    /// (H, lambda before the C(H) correction, number of scales used). Same arithmetic as engine.py.
+    fn fit(&self, d: &[f64], fl: &[f64], l: &[f64], finest: usize) -> (f64, f64, usize) {
+        let m = d.len();
+        let mut okg = [false; 16];
+        let mut oku = [false; 16];
+        let mut cg = 0;
+        for i in 0..m {
+            okg[i] = d[i] > self.cfg.snr_gate * fl[i];
+            oku[i] = d[i] > 0.0;
+            if okg[i] { cg += 1; }
+        }
+        let (mut sw, mut sx, mut sy, mut sxx, mut sxy) = (0.0, 0.0, 0.0, 0.0, 0.0);
+        let mut ok = [false; 16];
+        let mut logd = [0.0; 16];
+        let mut nok = 0;
+        let mut used = 0;
+        for i in 0..m {
+            ok[i] = if cg >= 2 { okg[i] } else { oku[i] };
+            if ok[i] { used += 1; if finest > 0 && used > finest { ok[i] = false; } }
+            if ok[i] { nok += 1; }
+            logd[i] = if ok[i] { log(if d[i] > 1e-30 { d[i] } else { 1e-30 }) } else { 0.0 };
+            let w = if ok[i] { 1.0 } else { 0.0 };
+            sw += w; sx += w * l[i]; sy += w * logd[i]; sxx += w * l[i] * l[i]; sxy += w * l[i] * logd[i];
+        }
+        let den = sw * sxx - sx * sx;
+        let slope = if den > 1e-12 { (sw * sxy - sx * sy) / den } else { 1.0 };
+        let hn = clamp(0.5 * slope, 0.05, 1.0);
+        let mut sl = 0.0;
+        for i in 0..m { if ok[i] { sl += logd[i] - 2.0 * hn * l[i]; } }
+        let lam = exp(sl / if sw > 1.0 { sw } else { 1.0 });
+        (hn, lam, nok)
     }
 
     /// The window lower bound in use (s).
@@ -180,51 +280,64 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
     #[allow(clippy::manual_is_multiple_of)]
     pub fn step(&mut self, q: &[f64; N], a: &[f64; N], b: &[f64; N], frame: Option<bool>) -> &[f64; N] {
         let dt = self.cfg.dt;
-        self.head = (self.head + 1) % RING;
+        let raw = self.cfg.identification == Identification::Raw;
+        if raw { self.head = (self.head + 1) % RING; }
         let send = match frame { Some(f) => f, None => self.k % self.frame_every == 0 };
+        let mut done = [false; 16];
+        if !raw {
+            for (i, dn) in done.iter_mut().enumerate().take(self.nsc) { self.cnt[i] += 1; *dn = self.cnt[i] == self.sc[i]; }
+        }
         for j in 0..N {
             let meas = 0.5 * (a[j] + b[j]);
             let e = q[j] - meas;
             let d = (a[j] - b[j]) / sqrt(2.0);
             self.n2[j] += self.aw * (d * d - self.n2[j]);                       // per-read noise variance
             let r = (q[j] - self.thff[j]) + (meas - self.thm[j]);                // residual, exogenous channels
-            self.hist[self.head][j] = r;
-            if self.k >= self.maxlag as u64 {
-                for i in 0..self.nl {
-                    let dd = r - self.hist[(self.head + RING - self.lag[i]) % RING][j];
-                    self.dk[i][j] += self.aw * (dd * dd - self.dk[i][j]);
+            let mut fitted: Option<(f64, f64, usize)> = None;
+            if raw {
+                self.hist[self.head][j] = r;
+                if self.k >= self.maxlag as u64 {
+                    for i in 0..self.nl {
+                        let dd = r - self.hist[(self.head + RING - self.lag[i]) % RING][j];
+                        self.dk[i][j] += self.aw * (dd * dd - self.dk[i][j]);
+                    }
+                }
+                if self.k > self.warm {
+                    let mut dv = [0.0; 8];
+                    let mut fl = [0.0; 8];
+                    for i in 0..self.nl { dv[i] = self.dk[i][j] - self.n2[j]; fl[i] = self.n2[j]; }   // noise floor removed
+                    let (logl, nl) = (self.logl, self.nl);
+                    fitted = Some(self.fit(&dv[..nl], &fl[..nl], &logl[..nl], 0));
+                }
+            } else {
+                for (i, &dn) in done.iter().enumerate().take(self.nsc) {
+                    self.acc[i][j] += r;
+                    if dn {
+                        let mean = self.acc[i][j] / self.sc[i] as f64;
+                        if self.hasprev[i] {
+                            let dd = mean - self.prev[i][j];
+                            let aw = if self.nblk[i][j] > 0 { self.ablk[i] } else { 1.0 };
+                            self.da[i][j] += aw * (dd * dd - self.da[i][j]);
+                            self.nblk[i][j] += 1;
+                        }
+                        self.prev[i][j] = mean;
+                        self.acc[i][j] = 0.0;
+                    }
+                }
+                if self.k > self.warm {
+                    let mut dv = [0.0; 16];
+                    let mut fl = [0.0; 16];
+                    for i in 0..self.nsc {
+                        fl[i] = self.n2[j] * dt / (self.sc[i] as f64 * dt);                  // n2 dt / l, white read noise
+                        dv[i] = if self.nblk[i][j] >= 2 { self.da[i][j] - fl[i] } else { -1.0 };
+                    }
+                    let (logs, nsc, finest) = (self.logs, self.nsc, self.finest);
+                    let (hn, lam, nok) = self.fit(&dv[..nsc], &fl[..nsc], &logs[..nsc], finest);
+                    fitted = Some((hn, lam / c_h(hn), nok));
                 }
             }
-            if self.k > self.warm {
-                let mut dv = [0.0; 8];
-                let mut okg = [false; 8];
-                let mut oku = [false; 8];
-                let mut cg = 0;
-                for i in 0..self.nl {
-                    dv[i] = self.dk[i][j] - self.n2[j];                           // noise floor removed
-                    okg[i] = dv[i] > self.cfg.snr_gate * self.n2[j];
-                    oku[i] = dv[i] > 0.0;
-                    if okg[i] { cg += 1; }
-                }
-                let (mut sw, mut sx, mut sy, mut sxx, mut sxy) = (0.0, 0.0, 0.0, 0.0, 0.0);
-                let mut ok = [false; 8];
-                let mut logd = [0.0; 8];
-                let mut nok = 0;
-                for i in 0..self.nl {
-                    ok[i] = if cg >= 2 { okg[i] } else { oku[i] };
-                    if ok[i] { nok += 1; }
-                    logd[i] = if ok[i] { log(if dv[i] > 1e-30 { dv[i] } else { 1e-30 }) } else { 0.0 };
-                    let w = if ok[i] { 1.0 } else { 0.0 };
-                    let l = self.logl[i];
-                    sw += w; sx += w * l; sy += w * logd[i]; sxx += w * l * l; sxy += w * l * logd[i];
-                }
-                let den = sw * sxx - sx * sx;
-                let slope = if den > 1e-12 { (sw * sxy - sx * sy) / den } else { 1.0 };
-                let hn = clamp(0.5 * slope, 0.05, 1.0);                           // smoothness H
+            if let Some((hn, lam, nok)) = fitted {
                 let s2 = 0.5 * self.n2[j] * dt;                                   // noise PSD of the pair mean
-                let mut sl = 0.0;
-                for i in 0..self.nl { if ok[i] { sl += logd[i] - 2.0 * hn * self.logl[i]; } }
-                let lam = exp(sl / if sw > 1.0 { sw } else { 1.0 });
                 let ts = kappa_h(hn) * pow((if s2 > 1e-30 { s2 } else { 1e-30 }) / (if lam > 1e-30 { lam } else { 1e-30 }),
                                            1.0 / (2.0 * hn + 1.0));
                 let ts = clamp(ts, self.floor, self.cfg.tau_max);
@@ -240,6 +353,9 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
             self.thm[j] += dt * clamp((self.cmd[j] - self.thm[j]) / st, -self.w0[j], self.w0[j]);
             self.thff[j] += dt * clamp((q[j] - self.thff[j]) / st, -self.w0[j], self.w0[j]);
         }
+        if !raw {
+            for (i, &dn) in done.iter().enumerate().take(self.nsc) { if dn { self.cnt[i] = 0; self.hasprev[i] = true; } }
+        }
         self.k += 1;
         &self.cmd
     }
@@ -254,6 +370,12 @@ mod tests {
         assert!((window_floor(0.001, 0.003, 1e-4) - 0.001 / 0.45).abs() < 1e-15);   // 2.22 ms
         assert!((loop_delay(0.001, 0.003, 1e-4) - 0.0021).abs() < 1e-15);
         assert!((window_floor(0.001, 0.008, 1e-4) - 0.0046).abs() < 1e-15);         // slow frame: the delay wins
+    }
+
+    #[test]
+    fn allan_constant() {
+        assert!((c_h(0.5) - 2.0 / 3.0).abs() < 1e-12);                                // Allan variance of a random walk
+        assert!((c_h(1.0) - 1.0).abs() < 1e-12);
     }
 
     #[test]

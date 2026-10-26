@@ -62,7 +62,7 @@ The two identifications on the MAESTRO 1 joint bench (the table below, `python e
 | B, steady noise | 1.193 / 1.275 (x1.07) / 1.274 (x1.07) | 0.713 / 0.769 (x1.08) / 0.775 (x1.09) |
 | B, noise step | 1.631 / 1.450 (x0.89) / 1.487 (x0.91) | 1.284 / 0.958 (x0.75) / 1.056 (x0.82) |
 
-In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` reproduces the 0.1.x results bit for bit and is what the C++ and Rust ports implement (the example and the replay tool use it for that reason). Porting the block-mean identification to C++ and Rust is the next step.
+In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` reproduces the 0.1.x results bit for bit (the example and the replay tool use it for that reason). All three implementations carry both identifications, selected by `identification` in Python, `Config::identification` in C++ (`syntonic::ALLAN` or `syntonic::RAW`) and in Rust (`Identification::Allan` or `Identification::Raw`).
 
 The complete software bench (scripts with pre-registered hypotheses, SHA-256 of each script, tables) is in the bench note of 26 October 2026 in the project; its headline beyond the fix above: against Bayesian Kalman banks the engine is at parity in stationary and slowly drifting regimes, better after sensor-noise increases, behind after noise decreases and fast drift, and a constant-velocity Kalman beats any first-order window by 25 % on smooth targets (H >= 0.85). The engine does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
 
@@ -129,7 +129,7 @@ The window floor was tested on its own (`bench/`, runs v8 and v9). Set to the lo
 ## Checks
 
 - The Python engine in `python/syntonic_engine` with `identification='raw'` reproduces the bench engine exactly: zero difference in joint angles and windows over 33 s on 12 joints; a unit test pins it to the 0.1.1 numbers.
-- On the same 33 s, 12-joint replay (raw identification), the C++ header agrees with the Python engine to 1.5e-14 rad and the Rust crate to 5.4e-14 rad. The C++ and Rust ports do not yet have the block-mean identification.
+- On the same 33 s, 12-joint replay, the C++ header agrees with the Python engine to 1.5e-14 rad (raw identification) and 7.8e-16 rad (block means); the Rust crate to 5.4e-14 rad and 8.9e-16 rad.
 - The block-mean identification is unit-tested on a fractional Brownian target with read noise large enough to defeat the raw one (`python/tests`).
 - `examples/arm_fk.py`, the baton-tip kinematics in plain numpy, agrees with MuJoCo to 7e-16 m over 200 random poses.
 - Neither the C++ header nor the Rust crate has run on a microcontroller yet. The Rust crate builds as `no_std` but has not been cross-compiled for a Cortex-M board, and the Teensy sketch has only been compiled on a PC against stand-ins for the Arduino functions.
@@ -140,16 +140,18 @@ To run the checks yourself, from the repository root (Python 3.9 or later, a C++
 pip install -e python scipy
 python -m unittest discover -s python/tests          # unit tests of the Python engine
 python examples/servo_bench.py                       # the results table above, about a minute; add --allan for both identifications
-python rust/tools/make_replay_log.py                 # writes replay_log.bin and replay_w0.bin
-g++ -O2 -std=c++11 -Icpp cpp/tests/replay.cpp -o replay_cpp && ./replay_cpp replay_log.bin replay_w0.bin
-cd rust && cargo test && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin
+python rust/tools/make_replay_log.py                 # writes replay_log.bin (raw), replay_log_allan.bin and replay_w0.bin
+g++ -O2 -std=c++11 -Icpp cpp/tests/replay.cpp -o replay_cpp
+./replay_cpp replay_log.bin replay_w0.bin raw && ./replay_cpp replay_log_allan.bin replay_w0.bin allan
+cd rust && cargo test && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin raw \
+        && cargo run --release --example replay -- ../replay_log_allan.bin ../replay_w0.bin allan
 ```
 
 ## What is in the repository
 
 ```
 python/syntonic_engine/   the engine (numpy), with unit tests in python/tests/
-cpp/SyntonicEngine.h      the engine as a single C++ header, with a replay test in cpp/tests/
+cpp/SyntonicEngine.h      the engine as a single C++ header (both identifications), with a replay test in cpp/tests/
 rust/                     the engine as a no_std Rust crate, with a replay check against Python
 examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
 bench/                    the full bench scripts and every result file; the scripts need the MAESTRO 1
