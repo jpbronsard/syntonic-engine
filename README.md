@@ -1,6 +1,6 @@
 # Syntonic Engine
 
-**A joint correction loop for robots whose time window comes from the Syntony Principle, with nothing tuned.**
+**One formula, three facts about the machine, no tuning.** The syntonic engine sets the time window of a correction or an estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony Principle). Its only machine-specific inputs are the loop timing and delay, the actuator's authority, and access to the read noise.
 
 Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal QC Canada  
 ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
@@ -13,7 +13,13 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 ---
 
-I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned.
+## What is claimed, and what is not
+
+On synthetic benches (`bench/software_2026-10-26/`) the engine stays within a few percent of the best fixed window and of Bayesian Kalman banks fitted with a change detector wherever the signal belongs to its class (a first-order window on a signal with a power-law structure function), tolerates increases of the sensor noise better than they do, and stays behind them where a second-order model applies (smooth targets, H >= 0.85: 25 %) or when the regime drifts fast. It does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
+
+The hypothesis under test is portability: the same code, unchanged, reaching the optimum of its class on machines of different physics, each described by its three facts and nothing else. The substrates are a servo joint (ARM-1), a quadrotor on a gimbal, and, for the law rather than the code, a human in a tracking task. The pass criterion on each is the one of the software bench: window within a factor 1.5 of the swept optimum, regret under 10 %, exponent against U'. A failure on any of them is published as such and marks where the law stops. Nothing of this has run on hardware yet.
+
+I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned per machine; the design constants it carries (scales, averaging time, warm-up, rate limit, gate) are the same everywhere, and the portability hypothesis stands or falls with them.
 
 Every joint controller has to decide how long to average its sensor before it corrects. Average too briefly and the joint chases sensor noise. Average too long and it falls behind the motion. A PID makes that decision through gains found by trial, one joint at a time. This engine measures what the decision depends on while the robot moves (the sensor noise, and how fast and how smoothly the motion changes) and computes the window directly:
 
@@ -35,7 +41,7 @@ On every loop tick, for every joint:
 
 ## What you need to provide
 
-Three facts about your hardware. There is nothing to tune.
+Three facts about your hardware. There is nothing to tune. In general terms: the loop timing and its delay (which set the window floor), the actuator's authority (what a correction may ask of it), and access to the read noise (two independent reads per tick, or a known noise statistic). For a servo joint they are:
 
 | | MAESTRO 1 |
 |---|---|
