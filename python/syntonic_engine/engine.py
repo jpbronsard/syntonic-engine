@@ -1,6 +1,7 @@
 # Copyright 2026 Jean-Pierre Bronsard (SyntonicAI Recherche)
 # Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE.
-"""Syntonic engine: a joint correction loop whose time window follows Theorem U' of the Syntony Principle.
+"""Syntonic engine: one formula, three facts about the machine, no tuning. A correction loop (here, a joint) whose
+time window follows Theorem U' of the Syntony Principle.
 
 Each loop tick, for every joint:
   1. read the encoder twice (two independent reads of the same angle);

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "syntonic-engine"
 version = "0.2.0"
-description = "Joint correction with a time window from the Syntony Principle (Theorem U'), nothing tuned"
+description = "One formula, three facts about the machine, no tuning: a time-window law from first principles (Theorem U' of the Syntony Principle) for correction and estimation"
 license = {text = "Apache-2.0"}
 authors = [{name = "Jean-Pierre Bronsard"}]
 requires-python = ">=3.9"

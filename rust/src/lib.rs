@@ -1,8 +1,8 @@
 // Copyright 2026 Jean-Pierre Bronsard (SyntonicAI Recherche)
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE.
 
-//! Syntonic engine: a joint correction loop whose time window comes from the Syntony Principle (Theorem U'),
-//! with nothing tuned. Same arithmetic as the Python reference (`python/syntonic_engine`) and the C++ header
+//! Syntonic engine: one formula, three facts about the machine, no tuning. A correction loop whose time window
+//! comes from the Syntony Principle (Theorem U'). Same arithmetic as the Python reference (`python/syntonic_engine`) and the C++ header
 //! (`cpp/SyntonicEngine.h`).
 //!
 //! For each joint, the window is

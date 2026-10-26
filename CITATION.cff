@@ -1,11 +1,15 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
-title: "Syntonic Engine"
+title: "Syntonic Engine: one formula, three facts about the machine, no tuning"
 abstract: >-
-  A joint correction loop whose time window comes from the Syntony Principle (Theorem U'), with nothing tuned.
-  Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On the simulated MAESTRO 1 joint bench it
-  matches a joint-by-joint tuned PID at the baton tip under steady noise and does better when the noise jumps.
+  One formula, three facts about the machine, no tuning: the engine sets the time window of a correction or an
+  estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the
+  Syntony Principle); its only machine-specific inputs are the loop timing and delay, the actuator's authority
+  and access to the read noise. Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On
+  synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
+  second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip. The
+  hypothesis under test is portability across machines of different physics and, for the law, the living.
 authors:
   - family-names: "Bronsard"
     given-names: "Jean-Pierre"

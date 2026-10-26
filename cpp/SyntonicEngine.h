@@ -1,7 +1,8 @@
 // Copyright 2026 Jean-Pierre Bronsard (SyntonicAI Recherche)
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE.
 //
-// Syntonic engine, header-only C++ (Arduino / Teensy 4.x and desktop). Same arithmetic as the Python reference
+// Syntonic engine: one formula, three facts about the machine, no tuning. Header-only C++ (Arduino / Teensy 4.x and
+// desktop). Same arithmetic as the Python reference
 // (python/syntonic_engine/engine.py) and the Rust crate (rust/): per joint, the correction window follows Theorem U' of the Syntony Principle,
 //   tau* = kappa_H (sigma^2 / lambda_H)^(1 / (2H + 1)),   kappa_H = (2H Gamma(2H + 1))^(-1 / (2H + 1)),
 // bounded below by the loop delay. Nothing is tuned.

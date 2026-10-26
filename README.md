@@ -1,4 +1,4 @@
-# Syntonic Engine
+# Syntonic Engine: one formula, three facts about the machine, no tuning
 
 **One formula, three facts about the machine, no tuning.** The syntonic engine sets the time window of a correction or an estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony Principle). Its only machine-specific inputs are the loop timing and delay, the actuator's authority, and access to the read noise.
 
