@@ -6,7 +6,8 @@ abstract: >-
   One formula, three facts about the machine, no tuning: the engine sets the time window of a correction or an
   estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the
   Syntony Principle); its only machine-specific inputs are the loop timing and delay, the actuator's authority
-  and access to the read noise. Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On
+  and access to the read noise. The law sets a window, not a loop gain; stability stays with the machine.
+  Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On
   synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
   second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip. The
   hypothesis under test is portability across machines of different physics and, for the law, the living.
