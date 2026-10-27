@@ -12,8 +12,8 @@ fails) and step 6b (the attitude estimator with the gyro drift as a fact measure
 Version 1.3 (27 Oct) adds section 12, step 7: cross-axis coupling on logged data of the X500 (does the attitude
 estimator, or the rate path, need the matrix law?), with the TH44 collapse certificate on three axes.
 Version 1.4 (27 Oct) adds section 13, step 6c: a pre-registered ablation of the attitude-estimator law (the
-exponent, a fixed horizon, a x256 rise of the vibration). Four of five hypotheses hold; the predicted window fails
-at x256.
+exponent, a fixed horizon, a x256 rise of the vibration). Four of five hypotheses hold, the exponent test at the edge
+of its band; the predicted window fails at x256.
 
 ## 1. Purpose and verdict
 
@@ -354,9 +354,11 @@ a three-axis rate bench, per-axis law against matrix law, with the measured corr
 
 ## 13. Step 6c (27 Oct 2026): ablation of the attitude-estimator law
 
-`step6c_ablation.py` (SHA-256 d7c8b23b) and its judge `evaluate_step6c.py` (905b80fd), both pre-registered and
-committed before the full run; the smoke run (two seeds, W only) printed only the drift fact and the oracle windows,
-and nothing was changed after it. Results in `results/step6c_results.txt`, rows in `results/step6c_rows.json`, run log
+`step6c_ablation.py` (SHA-256 d7c8b23b) and its judge `evaluate_step6c.py` (905b80fd), both pre-registered. Their
+contents were fixed before the smoke run (file times) and they were committed before any result was written (the
+full run had started; the hashes it printed match the commit). The smoke run (two seeds, W only) printed only the
+drift fact, the oracle windows and the runtime; at V = 256 its oracle window was 10.0 s against 16.0 s predicted,
+and no hypothesis was amended. Results in `results/step6c_results.txt`, rows in `results/step6c_rows.json`, run log
 in `results/step6c_run.log`.
 
 The question. A critique of step 6b asks whether the square-root law contributes anything beyond the new noise
@@ -389,26 +391,36 @@ J relative to the law, by exponent p:
 
 - H6c.1 holds: POW-0.5 reproduces step 6b's rows (largest difference 4e-16 deg).
 - H6c.2 holds: the law beats the best single fixed window chosen with hindsight (J ratio 0.840 in B, 0.860 in W; lower
-  RMS in every segment of both) and its own nominal window held fixed (0.647 and 0.263).
-- H6c.3 holds, at the edge: in W the J-minimising exponent is p* = 0.400 (band [0.4, 0.6]), the grid minimum is at
-  0.375, which beats 0.5 by 17 % in J; exponents 0.25 and 0.75 cost 1.23 and 3.90 times J. In B the square root is
+  RMS in every segment of both, but at V = 256 by 0.7 % only, in 6 seeds of 10) and its own nominal window held fixed
+  (0.647 and 0.263). It does not beat the per-segment oracle, which is a fixed window chosen with hindsight for each
+  segment.
+- H6c.3 holds, at the edge: in W the J-minimising exponent is p* = 0.4005 (band [0.4, 0.6]), a pass within seed
+  noise; the grid minimum is at 0.375, which beats 0.5 by 17 % in J; exponents 0.25 and 0.75 cost 1.23 and 3.90 times J. In B the square root is
   the grid minimum. The oracle's own window grows with exponent 0.387 from V = 1 to 256 and 0.455 from 1 to 1/16; the
   law's with 0.501 and 0.482.
 - H6c.4 fails: in W the law's window is within the band at V = 1 (0.84 of the oracle, regret 1.5 %) and 1/16 (0.81,
-  3.4 %), but at V = 256 it is 1.65 times the oracle window (13.3 against 8.0 s), regret 10.2 % against a 10 % limit.
+  3.4 %), but at V = 256 it is 1.65 times the oracle window (13.3 against 8.0 s; limit 1.5) and the regret is 10.2 %
+  (limit 10 %). Per seed at V = 256: oracle window 6.5 to 19.0 s, window ratio 0.69 to 2.01 (7 of 10 above 1.5),
+  regret -21 to +62 % (5 of 10 above 10 %). The window half of the failure is robust; the regret half is within seed
+  noise.
 - H6c.5 holds: in W the law is within 1.8, 5.4 and 4.1 % of the clairvoyant Kalman and has 53 % less error than the
-  fixed-noise Kalman at V = 256 (9 % at 1/16, 2 % more at nominal). Reported: against KF-OPT (one noise setting for the
+  fixed-noise Kalman at V = 256 (10 seeds of 10; 9 % less at 1/16, 2 % more at nominal). Reported: against KF-OPT (one noise setting for the
   whole stream) the law has 53 % and 67 % less error at V = 1 and 1/16 and 3 % more at 256.
 - Reported, not judged: transients (first 60 s of each W segment). After the drop from V = 256 to 1/16 the law's RMS is
-  27.2 against 14.5 for the fixed-noise Kalman and 10.9 for the clairvoyant one: the window shortens at the rate limit.
+  27.2 against 14.5 for the fixed-noise Kalman, 10.9 for the clairvoyant one and 14.8 for its own nominal window held
+  fixed: the window shortens at the rate limit.
+- About 95 % of W's total J comes from its V = 256 segment, so the W verdicts rest on 120 s of slow bias excursions per
+  seed; everything in B is robust to the seeds.
 
 What it means. The square-root law contributes beyond the noise estimator and beyond any fixed horizon: the exponent
 does the work, and the law stays near a Kalman filter told the true noise across a x256 rise of the vibration. It
 does not predict the optimal window once that window is long: at V = 256 the optimum grows more slowly than the
 square root, and the law, with kappa = 1 and no refit, overshoots it by a factor 1.65. The likely cause, not tested
-here, is the gyro's bias random walk: the drift fact is measured at rest over 0.128 to 1.024 s, where the angle random
-walk dominates, while at windows of several seconds the bias walk adds drift, so the effective drift is larger and the
-optimal window shorter (H above 1/2 at those scales, outside the class the law assumes with H fixed at 1/2). The next
-test follows from it: the drift measured at the scale where the window sits (Allan variance out to tens of seconds),
-or H measured as U' allows, pre-registered against the same rows.
+here, is the gyro's bias random walk. The drift fact is measured at rest over 0.128 to 1.024 s, where the angle random
+walk dominates; at windows of several seconds the bias walk adds drift, and it reaches the angle through the bias
+integral, whose gain is tied to the window. A stationary calculation of this loop made during the review (not in the
+repository, to be checked) suggests the integral path dominates: the Allan drift at the window scale is only 5 to 21 %
+above the rest value, so measuring the drift out to tens of seconds would not close the gap alone. The next test must
+address the bias channel (its gain, or the bias walk entered as a second fact) as well as the scale of the drift, or
+let H be measured as U' allows, pre-registered against the same rows.
 

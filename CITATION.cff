@@ -12,7 +12,8 @@ abstract: >-
   synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
   second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip; in a
   simulated quadrotor attitude estimator, with the gyro's drift measured once at rest, it lands within a few percent
-  of the best fixed window, at parity with a tuned Kalman filter under steady vibration, and beats a fixed-noise
+  of the best fixed window under moderate changes of the vibration (it overshoots it when the vibration rises
+  x256), at parity with a tuned Kalman filter under steady vibration, and beats a fixed-noise
   Kalman filter when the vibration rises; on logs of a real quadrotor on the ground, the measured noise and drift
   matrices predict that estimating roll and pitch jointly, as an EKF does, would gain under 0.5 % (RMS) over the
   law axis by axis. The law has not yet run as an estimator on hardware. The
