@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.3. 26 and 27 October 2026. SyntonicAI Recherche.
+Bench note, version 1.4. 26 and 27 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -11,6 +11,9 @@ law has nothing to decide), step 6 (the attitude estimator, where the law holds 
 fails) and step 6b (the attitude estimator with the gyro drift as a fact measured once at rest, where it passes).
 Version 1.3 (27 Oct) adds section 12, step 7: cross-axis coupling on logged data of the X500 (does the attitude
 estimator, or the rate path, need the matrix law?), with the TH44 collapse certificate on three axes.
+Version 1.4 (27 Oct) adds section 13, step 6c: a pre-registered ablation of the attitude-estimator law (the
+exponent, a fixed horizon, a x256 rise of the vibration). Four of five hypotheses hold; the predicted window fails
+at x256.
 
 ## 1. Purpose and verdict
 
@@ -348,3 +351,64 @@ On the rate path in flight a coupling of the motion appeared that the matrix law
 steady flight at 1 kHz to be measured with tight intervals, an innovation estimator written for narrowband
 vibration before the data, and magnetometer values in the log for yaw attitude. If the coupling holds, step 7b is
 a three-axis rate bench, per-axis law against matrix law, with the measured correlations.
+
+## 13. Step 6c (27 Oct 2026): ablation of the attitude-estimator law
+
+`step6c_ablation.py` (SHA-256 d7c8b23b) and its judge `evaluate_step6c.py` (905b80fd), both pre-registered and
+committed before the full run; the smoke run (two seeds, W only) printed only the drift fact and the oracle windows,
+and nothing was changed after it. Results in `results/step6c_results.txt`, rows in `results/step6c_rows.json`, run log
+in `results/step6c_run.log`.
+
+The question. A critique of step 6b asks whether the square-root law contributes anything beyond the new noise
+estimator and a well-chosen fixed horizon. SYN-6B has two separable parts: the live noise estimate s2 and the map from
+s2 to the window. The ablation keeps the first and replaces the second by tau = sqrt(S0_nom / lambda_hat) (s2 /
+S0_nom)^p, p in {0, 0.25, 0.375, 0.5, 0.625, 0.75, 1}, every variant calibrated at the true nominal level (which
+favours the alternatives); p = 0.5 is the law, p = 0 its nominal window held fixed. BEST-FIX is the best single
+fixed window over a whole stream, chosen with hindsight from the oracle sweep. Scenarios: B (V = 1, 16, 1/16, step 6)
+and a new W (V = 1, 256, 1/16, segments 180 s, steady part the last 120 s), where the optimal window predicted by
+sqrt(S0/Q_G) moves from 1.08 to 16 s. Same generator, filters, drift fact, constants and seeds as steps 6 and 6b.
+Total error J = sum over segments of the seed-mean squared RMS (a mean-square quantity).
+
+| Row | B: V 1 / 16 / 1/16 | W: V 1 / 256 / 1/16 |
+|---|---|---|
+| Oracle (best fixed window per segment) | 10.8 / 20.6 / 7.1 (1.14, 3.72, 0.54 s) | 10.4 / 49.2 / 7.0 (1.05, 8.05, 0.50 s) |
+| Law, POW-0.5 | 11.2 / 21.5 / 7.3 (0.87, 3.32, 0.40 s) | 10.6 / 54.9 / 7.2 (0.89, 13.3, 0.40 s) |
+| BEST-FIX (hindsight) | 11.9 / 22.9 / 10.3 (2.02 s) | 21.6 / 55.3 / 21.4 (5.50 s) |
+| POW-0 (nominal window fixed) | 10.9 / 28.7 / 8.0 | 10.4 / 114.1 / 8.1 |
+| KF-FIX (fixed noise, EKF2 style) | 10.9 / 29.0 / 7.9 | 10.4 / 116.0 / 8.0 |
+| KF-CLAIR (told the true noise) | 10.9 / 21.4 / 7.0 | 10.4 / 52.1 / 7.0 |
+
+RMS angle error in millidegrees on the steady parts, mean over ten seeds; windows are seed medians.
+
+J relative to the law, by exponent p:
+
+| p | 0 | 0.25 | 0.375 | 0.5 | 0.625 | 0.75 | 1 |
+|---|---|---|---|---|---|---|---|
+| B | 1.546 | 1.119 | 1.019 | 1 | 1.094 | 1.362 | 2.890 |
+| W | 3.796 | 1.229 | 0.833 | 1 | 2.642 | 3.903 | 5.008 |
+
+- H6c.1 holds: POW-0.5 reproduces step 6b's rows (largest difference 4e-16 deg).
+- H6c.2 holds: the law beats the best single fixed window chosen with hindsight (J ratio 0.840 in B, 0.860 in W; lower
+  RMS in every segment of both) and its own nominal window held fixed (0.647 and 0.263).
+- H6c.3 holds, at the edge: in W the J-minimising exponent is p* = 0.400 (band [0.4, 0.6]), the grid minimum is at
+  0.375, which beats 0.5 by 17 % in J; exponents 0.25 and 0.75 cost 1.23 and 3.90 times J. In B the square root is
+  the grid minimum. The oracle's own window grows with exponent 0.387 from V = 1 to 256 and 0.455 from 1 to 1/16; the
+  law's with 0.501 and 0.482.
+- H6c.4 fails: in W the law's window is within the band at V = 1 (0.84 of the oracle, regret 1.5 %) and 1/16 (0.81,
+  3.4 %), but at V = 256 it is 1.65 times the oracle window (13.3 against 8.0 s), regret 10.2 % against a 10 % limit.
+- H6c.5 holds: in W the law is within 1.8, 5.4 and 4.1 % of the clairvoyant Kalman and has 53 % less error than the
+  fixed-noise Kalman at V = 256 (9 % at 1/16, 2 % more at nominal). Reported: against KF-OPT (one noise setting for the
+  whole stream) the law has 53 % and 67 % less error at V = 1 and 1/16 and 3 % more at 256.
+- Reported, not judged: transients (first 60 s of each W segment). After the drop from V = 256 to 1/16 the law's RMS is
+  27.2 against 14.5 for the fixed-noise Kalman and 10.9 for the clairvoyant one: the window shortens at the rate limit.
+
+What it means. The square-root law contributes beyond the noise estimator and beyond any fixed horizon: the exponent
+does the work, and the law stays near a Kalman filter told the true noise across a x256 rise of the vibration. It
+does not predict the optimal window once that window is long: at V = 256 the optimum grows more slowly than the
+square root, and the law, with kappa = 1 and no refit, overshoots it by a factor 1.65. The likely cause, not tested
+here, is the gyro's bias random walk: the drift fact is measured at rest over 0.128 to 1.024 s, where the angle random
+walk dominates, while at windows of several seconds the bias walk adds drift, so the effective drift is larger and the
+optimal window shorter (H above 1/2 at those scales, outside the class the law assumes with H fixed at 1/2). The next
+test follows from it: the drift measured at the scale where the window sits (Allan variance out to tens of seconds),
+or H measured as U' allows, pre-registered against the same rows.
+
