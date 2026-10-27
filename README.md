@@ -1,6 +1,6 @@
 # Syntonic Engine: one formula, three facts about the machine, no tuning
 
-**One formula, three facts about the machine, no tuning.** The syntonic engine sets the time window of a correction or an estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony Principle). Its only machine-specific inputs are the loop timing and delay, the actuator's authority, and access to the read noise. The law decides when to correct, not how much: it sets a window, not a loop gain, and stability stays with the machine.
+**One formula, three facts about the machine, no tuning.** The syntonic engine sets the time window of a correction or an estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony Principle). Its only machine-specific inputs are three facts measured once: the loop timing and delay; the actuator's authority in a correction loop, or, in an estimator that fuses a fast drifting sensor with a noisy absolute one, the fast sensor's drift; and access to the read noise. The law decides when to correct, not how much: it sets a window, not a loop gain, and stability stays with the machine.
 
 Jean-Pierre Bronsard · SyntonicAI Recherche · Montréal QC Canada  
 ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
@@ -17,11 +17,11 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 On synthetic benches (`bench/software_2026-10-26/`) the engine stays within a few percent of the best fixed window and of Bayesian Kalman banks fitted with a change detector wherever the signal belongs to its class (a first-order window on a signal with a power-law structure function), tolerates increases of the sensor noise better than they do, and stays behind them where a second-order model applies (smooth targets, H >= 0.85: 25 %) or when the regime drifts fast. It does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
 
-The hypothesis under test is portability: the same code, unchanged, reaching the optimum of its class on machines of different physics, each described by its three facts and nothing else. The substrates are a servo joint (ARM-1), a quadrotor on a gimbal, and, for the law rather than the code, a human in a tracking task. The pass criterion on each is the one of the software bench: window within a factor 1.5 of the swept optimum, regret under 10 %, exponent against U'. A failure on any of them is published as such and marks where the law stops. Nothing of this has run on hardware yet.
+The hypothesis under test is portability: the same law reaching the optimum of its class on machines of different physics, each described by a few facts measured once and nothing else. In its strict form, the same code with its own identification unchanged, it has already failed once, in software: on the attitude estimator of a quadrotor the engine's identification of the drift ran away, and the law reached the optimum only with the gyro's angle random walk entered as a fact measured once at rest (bench steps 6 and 6b, below). The substrates are a servo joint (ARM-1), a quadrotor on a gimbal, and, for the law rather than the code, a human in a tracking task. The pass criterion on each is the one of the software bench: window within a factor 1.5 of the swept optimum, regret under 10 %, exponent against U'. A failure on any of them is published as such and marks where the law stops. Nothing of this has run on hardware yet.
 
 What the law does not decide is the loop gain. The window law is invariant under any rescaling of the error (the time constant does not change when the error is multiplied by a constant), so the law and the gain are separable, and the gain is outside it. On a servo joint the gain lives in the servo's own loop and the engine only moves its setpoint; that is this code. On a bare plant such as a quadrotor a proportional gain remains between the filtered error and the actuators. The SyntonicQuad flew with no PID, no I and no D, but with that gain set by hand (0.25 on roll and pitch, 0.20 on yaw, 0.90 from angle to rate) and adjusted after flights. The meta-gain law written for it (May 2026) replaces the hand-set gain by a measured control effectiveness B = d(omega dot)/du, with g = G* / B and G* a loop-gain constant declared once; it exists as a note and a single-axis simulation and has not flown. So the authority fact means, on a servo, the data-sheet speed and reaction time, and on a bare plant, B measured, with G* counted among the design constants that must carry unchanged from one machine to the next. For the quadrotor substrate the actuation-side test is stated with the window test: G* fixed on the X500 must hold on the gimbal quadrotor without retouching, or portability fails on the allocation side and is published as such.
 
-What is common across the substrates is the window law and its identification. Where the first-order element sits depends on the substrate: here it accumulates a correction on the setpoint of a servo that stabilises itself; on the SyntonicQuad it filtered the rate error under the proportional gain. Same law, same identification, different coupling, and the coupling is described by the authority fact.
+What is common across the substrates is the window law. Where the first-order element sits depends on the substrate: here it accumulates a correction on the setpoint of a servo that stabilises itself; on a quadrotor it belongs in the attitude estimator, as the crossover of the gyro and accelerometer fusion, and not in the rate loop, where the body integrates the command and the best window is the loop-delay floor (bench step 5). Same law, different coupling, and on each machine the facts it needs, measured once: on a servo joint, the data-sheet speed and reaction time and the encoder's read noise; on the attitude estimator, the gyro's angle random walk measured at rest, with only the accelerometer noise measured live.
 
 I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned per machine; the design constants it carries (scales, averaging time, warm-up, rate limit, gate) are the same everywhere, and the portability hypothesis stands or falls with them.
 
@@ -45,7 +45,7 @@ On every loop tick, for every joint:
 
 ## What you need to provide
 
-Three facts about your hardware. There is nothing to tune. In general terms: the loop timing and its delay (which set the window floor), the actuator's authority (for a servo, its no-load speed and reaction time from the data sheet; for a bare plant, its control effectiveness, measured), and access to the read noise (two independent reads per tick, or a known noise statistic). For a servo joint they are:
+Three facts about your hardware. There is nothing to tune. In general terms: the loop timing and its delay (which set the window floor), the actuator's authority (for a servo, its no-load speed and reaction time from the data sheet; for a bare plant, its control effectiveness, measured) or, in an estimator, the drift of the fast sensor (for a gyro, its angle random walk measured once at rest; bench step 6b), and access to the read noise (two independent reads per tick, or a known noise statistic). For a servo joint they are:
 
 | | MAESTRO 1 |
 |---|---|
@@ -136,6 +136,24 @@ What this shows:
 
 The window floor was tested on its own (`bench/`, runs v8 and v9). Set to the loop delay, it lands within 0.4 % of the best floor found by sweeping, for servo frames of 2, 3, 5 and 8 ms. A window shorter than the loop delay costs accuracy, and with slow servo frames it makes the loop ring. One case is still open: with the loop itself at 333 Hz, the rule was 7 % off the best floor (see the bench note).
 
+## Results on the attitude estimator of a quadrotor (simulation)
+
+The software bench's steps 6 and 6b (`bench/software_2026-10-26/`, note sections 10 and 11) place the law in the roll and pitch estimator of a quadrotor on a gimbal: one axis at 1 kHz, a gyro with angle random walk and bias drift, two IMUs whose accelerometers carry common-mode vibration with a rotor line, and a vibration level that changes with throttle (x1, x16, x1/16). The window sets the gain of a Mahony filter. The yardsticks are the best fixed window found by sweeping and a two-state Kalman filter (angle, gyro bias) tuned once, with its noise fixed at nominal as in PX4's EKF2, or switched with the true level (clairvoyant). Hypotheses and decision rules were written in each script before it ran; the parameters are representative, not measured.
+
+| Vibration | Best fixed window | Law, drift as a fact | Kalman, fixed noise | Kalman, clairvoyant |
+|---|---|---|---|---|
+| nominal | 10.8 (1.14 s) | 11.2 (0.87 s) | 10.9 | 10.9 |
+| x16 | 20.6 (3.72 s) | 21.5 (3.32 s) | 29.0 | 21.4 |
+| x1/16 | 7.1 (0.54 s) | 7.3 (0.40 s) | 7.9 | 7.0 |
+
+RMS angle error in millidegrees, mean over ten seeds; windows are seed medians.
+
+What this shows:
+- Given the true noise levels, the law lands on the best fixed window and at parity with a tuned Kalman filter (step 6). That is the expected equivalence of a first-order window with the steady-state Kalman gain; what it establishes is where the law plugs in.
+- The engine's own identification does not carry to this substrate (step 6): the gyro-bias integral, tied to the window, erases the drift it measures, and the window ran 3 to 43 times too short. Reading the noise from the difference of two IMUs fails too, as predicted: the difference cancels the common-mode vibration, which is the noise of the accelerometer channel.
+- With the gyro's angle random walk measured once at rest and only the accelerometer noise measured live (step 6b), the window lands within 2 to 4 % of the best fixed one, follows the vibration with exponents 0.505 and 0.474 (0.5 predicted), stays within 4 % of the clairvoyant Kalman, and beats the fixed-noise Kalman by 26 % when the vibration rises x16 (ten seeds out of ten). With the drift fact overestimated by a factor 2 the window falls outside the pass band; underestimated by 2, it passes.
+- Limits: one simulated axis, no lever arm or frame resonance, gyro noise independent of throttle, H fixed at 1/2 by the sensor rather than measured, and a slow start when the gyro bias is not calibrated (the Kalman carries an explicit bias state). Nothing has run on hardware; the gimbal bench, with an encoder per axis as truth, is the next test.
+
 ## Checks
 
 - The Python engine in `python/syntonic_engine` with `identification='raw'` reproduces the bench engine exactly: zero difference in joint angles and windows over 33 s on 12 joints; a unit test pins it to the 0.1.1 numbers.
@@ -166,7 +184,8 @@ rust/                     the engine as a no_std Rust crate, with a replay check
 examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
 bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
                           simulation model, which is not included, but all results are), and the software bench
-                          of 26 Oct 2026 against adaptive estimators (software_2026-10-26/, self-contained)
+                          of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6b
+                          (software_2026-10-26/, self-contained)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 

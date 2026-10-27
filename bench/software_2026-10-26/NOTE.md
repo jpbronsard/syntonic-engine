@@ -1,11 +1,14 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.1. 26 October 2026. SyntonicAI Recherche.
+Bench note, version 1.2. 26 and 27 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
 syntonic-engine 0.2.0 (commits 17a1536 and a9cc957 on GitHub), which fits the six finest scales that clear the
 noise floor where the bench scripts fitted all of them. No conclusion changes; the numbers that move are listed.
+Version 1.2 (27 Oct) adds sections 9 to 11, the quadrotor substrate in software: step 5 (the rate loop, where the
+law has nothing to decide), step 6 (the attitude estimator, where the law holds and the engine's identification
+fails) and step 6b (the attitude estimator with the gyro drift as a fact measured once at rest, where it passes).
 
 ## 1. Purpose and verdict
 
@@ -211,3 +214,44 @@ behind the raw one, mostly during the noise step (tip-error ratios 1.02 / 0.78 /
 - U' changes nothing here (R5 held), and the fitted H on a closed-loop error is not a power-law exponent at all (medians 0.05 to 0.79 across cells): this signal is not in the law's class as a stationary process.
 
 What it means. The law computes the window that best estimates the signal. In a quadrotor rate loop with an ideal actuator the best window for control is not the best window for estimation: the plant discards the rate noise, so the control optimum is the loop-delay floor whatever the noise. In flight, tau at the floor was therefore the right answer, not a symptom. The place where a rate-loop horizon matters is downstream of the loop: motor command noise, heat, frame resonances, actuator bandwidth, none of which this plant has. So the quadrotor substrate cannot test the horizon law by angle error alone; its criterion has to carry the cost of command noise (or a plant in which that noise costs angle), chosen before the sweep. That choice is a design weight, not a machine fact, and the master protocol has to name it as such. The soft X500-class plant (inner pole 4 /s under an outer pole of 7.5 /s) also shows that any inner lag is paid immediately, which is the measured form of the authority condition B g / Y >> outer pole.
+
+
+## 10. Step 6 (27 Oct 2026): the attitude estimator of a quadrotor on a gimbal
+
+`step6_quad_attitude_estimator.py` (SHA-256 035647c9, pre-registered in its docstring; a smoke test of two seeds printed only the oracle windows, no amendment, the full run carries the same hash; the smoke files in `results/` hold every row, unread before the full run). Judge `evaluate_step6.py` (its printed label was corrected once after the run, as for step 6b below: the file path and "script" SHA-256; no rule changed, the verdict regenerated identically). Results in `results/step6_results.txt` and `results/step6_rows.json`; exploratory diagnosis in `step6_diag1_structure_function.py` to `step6_diag3_hadamard.py`.
+
+Step 5 placed the law out of the rate loop. The place where a window costs on both sides is the attitude estimator, the fusion of gyro and accelerometer. One axis at 1 kHz on a gimbal (no translation): an Ornstein-Uhlenbeck attitude (5 deg, 2 s); a gyro with angle random walk Q_G = (0.01 deg/s/sqrt Hz)^2 and a bias random walk; two IMUs whose accelerometer tilt carries common-mode vibration (a white low-frequency part scaled by a level V and a rotor line at 92 Hz V^(1/4)), independent sensor noise and an 80 Hz anti-alias filter. Three scenarios of three 120 s segments, ten seeds: steady (V = 1, 1, 1), throttle (V = 1, 16, 1/16), and an uncalibrated gyro bias of 0.3 deg/s. The values are representative, not measured; the gimbal bench will measure them.
+
+The branchement, declared before the run: the two sensors reduce to one signal, z = accel tilt minus the open-loop integral of the gyro. Its slow part is the gyro drift (lambda) and its fast part the accel noise (sigma^2); the true attitude cancels. The window sets Kp = 1/tau of a Mahony filter, with the gyro-bias integral tied to it by the damping of the flown firmware (Ki = Kp^2 / (4 zeta^2), zeta = 1.826). Candidates: the oracle (fixed window swept, best per segment); the law with the true noise levels (SYN-K); the engine 0.2.0 identification on one stream, noise floor read at 16 to 128 ms (SYN-1S); the engine unchanged with its noise read from the two IMUs (SYN-2R); the law without the bias integral (witness); a two-state Kalman filter (angle, gyro bias) tuned once per stream (KF-OPT), with its noise fixed at nominal (KF-FIX, EKF2's fixed parameters) and switched with the true level (KF-CLAIR); a one-axis reduction of Madgwick; the flown `attitude_update` (0.5 s, no bias integral).
+
+- The law holds (H6.1, 9 of 9 cells). With the true noise levels the window lands within 0.88 to 1.28 of the oracle, regret 0.2 to 8.1 %, at 1.00 to 1.01 of the tuned Kalman under steady vibration and within 1.2 % of the clairvoyant one when the vibration changes x16. This is the expected equivalence of the first-order window with the steady-state Kalman gain; what it establishes is the branchement.
+- The engine's identification fails (H6.2, H6.3, H6.4, H6.5, H6.7). Measuring noise and drift itself, it sets the window 3 to 43 times too short (fitted H 0.05 to 0.07 in eight of nine cells), regret 33 to 456 %.
+- The predicted failure happened (H6.6). Reading its noise from the difference of two IMUs, the engine sits at the 2.2 ms floor with errors 23 to 31 times the oracle: the difference cancels the common-mode vibration, which is precisely the noise of the accelerometer channel in attitude fusion. The same holds for any inter-IMU noise estimate used on that channel.
+- What adaptation is worth here: the fixed-noise Kalman loses 36 % against the clairvoyant one when the vibration rises x16 and 12 % when it falls. The flown filter loses 14 % at nominal vibration and is about 14 times worse with the uncalibrated bias; the best one-axis Madgwick loses 38 %, dRehmFlight's beta = 0.04 about 2.6 times.
+
+Exploratory diagnosis, after the verdict. The bias integral, tied to the window, removes the slow drift from z beyond about 13 tau, so the structure function bends down at long scales (8, 16, 32 s: 1.3e-6, 7.2e-7, 3.9e-7 rad^2 on one seed): the fit reads H = 0.05 and lambda a hundred times too large, the window shortens, the integral speeds up, and the bending grows. Without the bias correction the accumulated bias random walk makes a ramp in z (structure function rising as l^1.8 from 4 to 32 s), outside the class. And the drift is visible only beyond about 2.5 to 3.5 times the optimal window: lambda cannot be measured live from minutes of data, while the noise level is measured within 12 % (second differences of block means at 32 to 128 ms).
+
+## 11. Step 6b (27 Oct 2026): the gyro drift as a fact, the accel noise measured live
+
+`step6b_gyro_fact.py` (SHA-256 aa082341, pre-registered; smoke test printed only the rest measurement; no amendment). Judge `evaluate_step6b.py` (its printed label was corrected once after the run, "rows" to "script" SHA-256; no rule changed, the verdict regenerated identically). Results in `results/step6b_results.txt` and `results/step6b_rows.json`. Same generator, scenarios, seeds and scoring as step 6; the oracle, Kalman, Madgwick and flown-filter rows are read from step 6 unchanged, and the flown filter recomputed here matches them exactly (identity check, maximum difference 0).
+
+SYN-6B: lambda is the gyro's angle random walk measured once from a 300 s static record (Allan variance at 0.128 to 1.024 s; lambda_hat / Q_G = 0.955 to 1.021, Allan-deviation slope -0.507), H = 1/2 by the sensor physics; the noise level is measured live from second differences of block means of z built on the raw gyro (no bias feedback), the minimum over 32, 64 and 128 ms; the law, the Mahony filter and its tied bias integral are those of step 6. Sensitivity: lambda multiplied by 2 and by 1/2.
+
+| Cell | Oracle (window) | SYN-6B (window) | lambda x2 | lambda /2 | KF-OPT | KF-FIX | KF-CLAIR |
+|---|---|---|---|---|---|---|---|
+| steady, seg 0 | 10.8 (1.14 s) | 11.2 (0.87 s) | 12.0 (0.62 s) | 10.9 (1.23 s) | 10.8 | 10.9 | 10.9 |
+| throttle, V x16 | 20.6 (3.72 s) | 21.5 (3.32 s) | 22.4 (2.34 s) | 23.0 (4.73 s) | 22.2 | 29.0 | 21.4 |
+| throttle, V /16 | 7.1 (0.54 s) | 7.3 (0.40 s) | 7.9 (0.29 s) | 7.1 (0.57 s) | 10.6 | 7.9 | 7.0 |
+| gyro bias, seg 0 | 11.2 (0.84 s) | 11.3 (0.87 s) | 12.0 (0.62 s) | 13.5 (1.23 s) | 10.8 | 10.9 | 10.9 |
+
+RMS angle error in millidegrees on the steady parts, mean over ten seeds; windows are seed medians.
+
+- H6b.1 holds: within 0.75 to 0.93 of the oracle window, regret 1.8 to 3.8 %, in the six cells of the steady and throttle scenarios. Per seed the regret exceeds 10 % in 3 of 60 seed-cells (10.1, 10.1 and 14.9 %).
+- H6b.2 holds: across the throttle steps the window follows the noise with exponents 0.505 and 0.474 (0.5 predicted).
+- H6b.3 holds: at 1.02 to 1.04 of the tuned Kalman under steady vibration.
+- H6b.4 holds: 26 % better than the fixed-noise Kalman when the vibration rises x16 (10 of 10 seeds) and 7 % better when it falls; within 0.7 to 3.7 % of the clairvoyant Kalman. A single Kalman tuning per stream cannot serve both levels: SYN-6B beats it by 7 % at nominal and 31 % at low vibration.
+- H6b.5 holds: with the uncalibrated gyro bias, regret 0.1 to 3.0 % once the bias is learned.
+- H6b.6 fails: with lambda halved the criterion holds everywhere, with lambda doubled it fails in all six cells (window 0.54 to 0.65 of the oracle, regret 5.7 to 13 %). The live noise level is biased low by the minimum over three noisy scales, and an overestimated drift adds to it. The drift fact must be measured at rest, not read from a data sheet that may be off by two in that direction.
+- Reported, not judged: after the x16 rise the transient RMS (first 40 s) is 23.7 against 31.9 for the fixed-noise Kalman and 22.5 for the clairvoyant one; at start with the uncalibrated bias the bias integral is slow, 86 against 12.6 for the Kalman, which carries an explicit bias state. The bias channel, with its gain tied to the window, is the weak point.
+
+What it means. On the attitude estimator the window law holds and reaches parity with a tuned Kalman, and it keeps the optimum when the vibration changes, where a Kalman with fixed noise parameters loses up to a third. The engine's own identification does not carry to this substrate: the drift must enter as a fact measured once (the gyro's angle random walk), and only the noise is measured live. The portability hypothesis in its strict form, the same code identification included, is therefore refuted on this substrate in software; it survives as the same law with facts measured once per machine. Not tested here: the U' exponent measurement (H is fixed at 1/2 by the sensor), gyro noise that rises with throttle, and everything a real gimbal adds (lever arm, frame resonances, measured vibration spectra). The gimbal bench, with an encoder per axis as truth, is the next test.

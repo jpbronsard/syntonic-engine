@@ -2,7 +2,7 @@
 
 The syntonic engine against adaptive estimators on synthetic fractional Brownian targets: six pre-registered
 steps, each script carrying its hypotheses and decision rule in its docstring and printing its own SHA-256 at
-the top of its results. `NOTE.md` is the bench note (version 1.1), `results/` holds every table as printed
+the top of its results. `NOTE.md` is the bench note (version 1.2), `results/` holds every table as printed
 (`*_results.txt`) and the per-seed rows (`*_rows.json`). The 110 MB bank checkpoints are not included; the
 scripts recompute them.
 
@@ -19,7 +19,16 @@ python step3_hardened_bank.py            # banks with a change detector         
 python step3c_meta_noise.py              # the engine with a law-driven noise estimator ~1 min
 python step4_drift.py                    # slow and fast drift                         ~10 min
 python rerun_engine_v020.py              # engine rows with the released 0.2.0 fit      ~4 min
+python step5_quad_rate_horizon.py        # the rate loop of a quadrotor cascade
+python step6_quad_attitude_estimator.py  # the attitude estimator of a quadrotor         ~8 min
+python evaluate_step6.py                 # its pre-registered verdict
+python step6b_gyro_fact.py               # the same, gyro drift as a fact at rest       ~2 min
+python evaluate_step6b.py                # its pre-registered verdict (needs step 6 rows)
+python step6_diag1_structure_function.py # exploratory diagnosis of step 6 (also diag2, diag3)
 ```
+
+Steps 5 to 6b are the quadrotor substrate in software (NOTE.md, sections 9 to 11); step 6b reads the oracle and
+competitor rows of step 6 and checks that its own recomputation of the flown filter matches them exactly.
 
 Every script is deterministic; the tables should reproduce to the printed digits. The code was written and
 run inside one working session with the author; the author's own re-run is the first independent check.

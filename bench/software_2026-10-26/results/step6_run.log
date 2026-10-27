@@ -1,0 +1,20 @@
+step6_quad_attitude_estimator.py  sha256 035647c9e7770ea8873d0ccd536af867ea9078362170112fb256d948dd6154ed
+  A_steady t = 60 s  (24 s)
+  A_steady t = 120 s  (50 s)
+  A_steady t = 180 s  (76 s)
+  A_steady t = 240 s  (99 s)
+  A_steady t = 300 s  (123 s)
+A_steady: oracle window per segment (seed median) [1.142, 1.069, 1.126]  vs sqrt(S0/Q_G) [1.077, 1.077, 1.077]  runtime 145 s
+  B_throttle t = 60 s  (23 s)
+  B_throttle t = 120 s  (48 s)
+  B_throttle t = 180 s  (73 s)
+  B_throttle t = 240 s  (98 s)
+  B_throttle t = 300 s  (123 s)
+B_throttle: oracle window per segment (seed median) [1.142, 3.721, 0.536]  vs sqrt(S0/Q_G) [1.077, 4.02, 0.473]  runtime 147 s
+  C_gyrobias t = 60 s  (23 s)
+  C_gyrobias t = 120 s  (47 s)
+  C_gyrobias t = 180 s  (71 s)
+  C_gyrobias t = 240 s  (97 s)
+  C_gyrobias t = 300 s  (121 s)
+C_gyrobias: oracle window per segment (seed median) [0.839, 1.069, 1.126]  vs sqrt(S0/Q_G) [1.077, 1.077, 1.077]  runtime 145 s
+written /home/claude/step6/results/step6_rows.json

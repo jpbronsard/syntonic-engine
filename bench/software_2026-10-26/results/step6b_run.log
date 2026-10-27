@@ -1,0 +1,6 @@
+step6b_gyro_fact.py  sha256 aa082341cdb9d60678152da16a568929cef2557fa46ec9af356aecd3ae3ebc6b
+Allan at rest: lambda_hat / Q_G per seed [1.014, 0.972, 0.957, 1.016, 0.969, 0.955, 0.98, 1.021, 1.008, 1.014]; Allan-deviation slope median -0.507 (ARW: -0.5)
+A_steady: runtime 29 s
+B_throttle: runtime 32 s
+C_gyrobias: runtime 31 s
+written /home/claude/step6/results/step6b_rows.json

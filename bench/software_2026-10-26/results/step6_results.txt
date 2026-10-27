@@ -1,0 +1,69 @@
+step6 rows step6_rows.json | script sha256 035647c9e7770ea8873d0ccd536af867ea9078362170112fb256d948dd6154ed full
+
+== Table: RMS angle error on steady parts (deg), mean over seeds; windows (s), seed medians ==
+
+A_steady  V = [1.0, 1.0, 1.0]  sqrt(S0/Q_G) = [1.077, 1.077, 1.077]
+  seg 0: oracle 0.0108 (tau 1.142) | SYN-1S 0.0377 (tau 0.064, H 0.05) | SYN-K 0.0109 | SYN-2R 0.3357 (tau 0.0022) | SYN-noI 0.0232 (tau 0.134)
+          KF-OPT 0.0108 | KF-FIX 0.0109 | KF-CLAIR 0.0109 | MADG-best 0.0149 | MADG-0.04 0.0281 | CF-0.5 0.0123
+  seg 1: oracle 0.0106 (tau 1.069) | SYN-1S 0.0370 (tau 0.053, H 0.05) | SYN-K 0.0106 | SYN-2R 0.3360 (tau 0.0022) | SYN-noI 0.0323 (tau 0.074)
+          KF-OPT 0.0105 | KF-FIX 0.0106 | KF-CLAIR 0.0106 | MADG-best 0.0143 | MADG-0.04 0.0273 | CF-0.5 0.0122
+  seg 2: oracle 0.0105 (tau 1.126) | SYN-1S 0.0360 (tau 0.054, H 0.05) | SYN-K 0.0106 | SYN-2R 0.3359 (tau 0.0022) | SYN-noI 0.0354 (tau 0.062)
+          KF-OPT 0.0106 | KF-FIX 0.0106 | KF-CLAIR 0.0106 | MADG-best 0.0161 | MADG-0.04 0.0282 | CF-0.5 0.0133
+  KF-OPT R/R_nom chosen (per seed): [0.707, 1.0, 1.0, 1.0, 1.414, 1.414, 1.0, 1.414, 0.707, 2.0]
+  MADG best 2beta (per seed): [0.02212, 0.01172, 0.02212, 0.01172, 0.01172, 0.01172, 0.01172, 0.01172, 0.0161, 0.01172]
+  transients (first 40 s of each segment), mean RMS: SYN-1S [0.0424, 0.034, 0.0364] KF-FIX [0.0125, 0.0112, 0.0104] KF-CLAIR [0.0125, 0.0112, 0.0104]
+
+B_throttle  V = [1.0, 16.0, 0.0625]  sqrt(S0/Q_G) = [1.077, 4.02, 0.473]
+  seg 0: oracle 0.0108 (tau 1.142) | SYN-1S 0.0377 (tau 0.064, H 0.05) | SYN-K 0.0109 | SYN-2R 0.3357 (tau 0.0022) | SYN-noI 0.0232 (tau 0.134)
+          KF-OPT 0.0121 | KF-FIX 0.0109 | KF-CLAIR 0.0109 | MADG-best 0.0150 | MADG-0.04 0.0281 | CF-0.5 0.0123
+  seg 1: oracle 0.0206 (tau 3.721) | SYN-1S 0.0299 (tau 1.203, H 0.55) | SYN-K 0.0216 | SYN-2R 0.5145 (tau 0.0022) | SYN-noI 0.0270 (tau 1.480)
+          KF-OPT 0.0222 | KF-FIX 0.0290 | KF-CLAIR 0.0214 | MADG-best 0.0250 | MADG-0.04 0.0679 | CF-0.5 0.0396
+  seg 2: oracle 0.0071 (tau 0.536) | SYN-1S 0.0210 (tau 0.111, H 0.07) | SYN-K 0.0071 | SYN-2R 0.1637 (tau 0.0022) | SYN-noI 0.0189 (tau 0.135)
+          KF-OPT 0.0106 | KF-FIX 0.0079 | KF-CLAIR 0.0070 | MADG-best 0.0118 | MADG-0.04 0.0264 | CF-0.5 0.0087
+  KF-OPT R/R_nom chosen (per seed): [2.0, 5.657, 5.657, 4.0, 22.627, 5.657, 4.0, 5.657, 5.657, 8.0]
+  MADG best 2beta (per seed): [0.01172, 0.00853, 0.01172, 0.00853, 0.00853, 0.00621, 0.00621, 0.00621, 0.00853, 0.00853]
+  transients (first 40 s of each segment), mean RMS: SYN-1S [0.0424, 0.0484, 0.0204] KF-FIX [0.0125, 0.0319, 0.0086] KF-CLAIR [0.0125, 0.0225, 0.0076]
+
+C_gyrobias  V = [1.0, 1.0, 1.0]  sqrt(S0/Q_G) = [1.077, 1.077, 1.077]
+  seg 0: oracle 0.0112 (tau 0.839) | SYN-1S 0.0579 (tau 0.023, H 0.05) | SYN-K 0.0122 | SYN-2R 0.3357 (tau 0.0022) | SYN-noI 0.0704 (tau 0.015)
+          KF-OPT 0.0108 | KF-FIX 0.0109 | KF-CLAIR 0.0109 | MADG-best 0.0498 | MADG-0.04 0.0635 | CF-0.5 0.1502
+  seg 1: oracle 0.0106 (tau 1.069) | SYN-1S 0.0540 (tau 0.025, H 0.05) | SYN-K 0.0106 | SYN-2R 0.3360 (tau 0.0022) | SYN-noI 0.0700 (tau 0.016)
+          KF-OPT 0.0105 | KF-FIX 0.0106 | KF-CLAIR 0.0106 | MADG-best 0.0491 | MADG-0.04 0.0624 | CF-0.5 0.1499
+  seg 2: oracle 0.0105 (tau 1.126) | SYN-1S 0.0516 (tau 0.028, H 0.05) | SYN-K 0.0106 | SYN-2R 0.3359 (tau 0.0022) | SYN-noI 0.0694 (tau 0.015)
+          KF-OPT 0.0106 | KF-FIX 0.0106 | KF-CLAIR 0.0106 | MADG-best 0.0498 | MADG-0.04 0.0633 | CF-0.5 0.1504
+  KF-OPT R/R_nom chosen (per seed): [0.707, 1.0, 1.0, 1.0, 1.414, 1.414, 1.0, 1.414, 0.707, 2.0]
+  MADG best 2beta (per seed): [0.14874, 0.14874, 0.14874, 0.14874, 0.14874, 0.14874, 0.14874, 0.14874, 0.14874, 0.14874]
+  transients (first 40 s of each segment), mean RMS: SYN-1S [0.0914, 0.0506, 0.0534] KF-FIX [0.0126, 0.0112, 0.0104] KF-CLAIR [0.0126, 0.0112, 0.0104]
+
+== Hypotheses ==
+H6.1 A_steady seg 0: SYN-K tau/oracle 0.947, regret 0.4 % -> pass
+H6.1 A_steady seg 1: SYN-K tau/oracle 1.009, regret 0.7 % -> pass
+H6.1 A_steady seg 2: SYN-K tau/oracle 0.956, regret 0.3 % -> pass
+H6.1 B_throttle seg 0: SYN-K tau/oracle 0.947, regret 0.4 % -> pass
+H6.1 B_throttle seg 1: SYN-K tau/oracle 1.080, regret 2.1 % -> pass
+H6.1 B_throttle seg 2: SYN-K tau/oracle 0.882, regret 0.2 % -> pass
+H6.1 C_gyrobias seg 0: SYN-K tau/oracle 1.284, regret 8.1 % -> pass
+H6.1 C_gyrobias seg 1: SYN-K tau/oracle 1.009, regret 0.7 % -> pass
+H6.1 C_gyrobias seg 2: SYN-K tau/oracle 0.956, regret 0.3 % -> pass
+H6.2 A_steady seg 0: SYN-1S tau/oracle 0.063, regret 200.0 % -> FAIL
+H6.2 A_steady seg 1: SYN-1S tau/oracle 0.048, regret 278.4 % -> FAIL
+H6.2 A_steady seg 2: SYN-1S tau/oracle 0.052, regret 239.6 % -> FAIL
+H6.2 B_throttle seg 0: SYN-1S tau/oracle 0.063, regret 200.0 % -> FAIL
+H6.2 B_throttle seg 1: SYN-1S tau/oracle 0.318, regret 33.5 % -> FAIL
+H6.2 B_throttle seg 2: SYN-1S tau/oracle 0.229, regret 187.3 % -> FAIL
+H6.3 exponent d log tau / d log S0: seg1 1.128, seg2 -0.291 (0.5 +/- 0.1); H in [0.4, 0.6] all A, B cells: False
+H6.4 A: RMS SYN-1S / KF-OPT per segment [3.492, 3.51, 3.409] (<= 1.10)
+H6.5 B: SYN-1S < KF-FIX in seg 1, 2: [np.False_, np.False_]  (ratios [3.472, 1.031, 2.674]); SYN-1S / KF-CLAIR [3.472, 1.398, 2.988] (<= 1.10)
+H6.6 B: SYN-2R tau/oracle [0.002, 0.0006, 0.0041], regret % [3057.8, 2494.1, 2222.6]; fails seg 0 and 1: True
+H6.7 C seg 0: SYN-1S tau/oracle 0.027, regret 433.8 % -> FAIL; noI/1S 1.22
+H6.7 C seg 1: SYN-1S tau/oracle 0.025, regret 455.8 % -> FAIL; noI/1S 1.30
+H6.7 C seg 2: SYN-1S tau/oracle 0.023, regret 396.2 % -> FAIL; noI/1S 1.34
+
+== Verdict ==
+H6.1: HOLDS
+H6.2: FAILS
+H6.3: FAILS
+H6.4: FAILS
+H6.5: FAILS
+H6.6: HOLDS
+H6.7: FAILS

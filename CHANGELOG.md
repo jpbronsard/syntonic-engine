@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Bench and documentation only; the code is that of 0.2.0.
+
+- Software bench, steps 6 and 6b (`bench/software_2026-10-26/`, note version 1.2, sections 10 and 11): the window law in the attitude estimator of a quadrotor on a gimbal, in simulation. Given the true noise levels it lands on the best fixed window and at parity with a tuned two-state Kalman filter. The engine's own identification does not carry to this substrate: the bias integral tied to the window erases the drift it measures (step 6, five of seven hypotheses failed; the predicted failure of the inter-IMU noise estimate held). With the gyro's angle random walk measured once at rest and only the accelerometer noise measured live, five of six hypotheses hold: within 2 to 4 % of the best fixed window, exponents 0.505 and 0.474 across throttle steps, 26 % better than a fixed-noise Kalman when the vibration rises x16; with the drift fact overestimated by two the window leaves the pass band (step 6b).
+- The statement changes accordingly. Portability in its strict form (the same code, identification included, unchanged) failed on the quadrotor attitude estimator in software; the hypothesis under test becomes the same law with a few facts measured once per machine. On a quadrotor the law belongs in the attitude estimator, not in the rate loop (step 5). The opening sentence and "What you need to provide" name the estimator's middle fact (the fast sensor's drift, measured once at rest) beside the actuator's authority. README, "What is claimed, and what is not", and a new section on the attitude-estimator results.
+- The bench README lists the run commands of steps 5 to 6b.
+
 ## 0.2.1 (26 Oct 2026)
 
 Documentation only; the code is that of 0.2.0.

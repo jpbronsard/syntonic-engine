@@ -1,0 +1,51 @@
+step6b script sha256 aa082341cdb9d60678152da16a568929cef2557fa46ec9af356aecd3ae3ebc6b | step6 script sha256 035647c9e7770ea8873d0ccd536af867ea9078362170112fb256d948dd6154ed
+Allan at rest: lambda_hat/Q_G [1.014, 0.972, 0.957, 1.016, 0.969, 0.955, 0.98, 1.021, 1.008, 1.014]; slope median -0.507
+identity check CF-0.5: max |diff| = 0.00e+00 deg -> OK
+
+== RMS (millideg), steady parts, mean over seeds; windows (s), seed medians ==
+A_steady seg 0 (V 1.0): oracle 10.8 (1.142 s) | SYN-6B 11.2 (0.872 s) | x2 12.0 (0.621 s) | /2 10.9 (1.231 s) | SYN-K 10.9 | KF-OPT 10.8 | KF-FIX 10.9 | KF-CLAIR 10.9
+A_steady seg 1 (V 1.0): oracle 10.6 (1.069 s) | SYN-6B 10.7 (0.898 s) | x2 11.4 (0.638 s) | /2 10.8 (1.268 s) | SYN-K 10.6 | KF-OPT 10.5 | KF-FIX 10.6 | KF-CLAIR 10.6
+A_steady seg 2 (V 1.0): oracle 10.5 (1.126 s) | SYN-6B 10.8 (0.889 s) | x2 11.6 (0.632 s) | /2 10.6 (1.254 s) | SYN-K 10.6 | KF-OPT 10.6 | KF-FIX 10.6 | KF-CLAIR 10.6
+   transients (first 40 s), mean RMS millideg: SYN-6B [14.6, 11.4, 10.8] KF-FIX [12.5, 11.2, 10.4] KF-CLAIR [12.5, 11.2, 10.4]
+B_throttle seg 0 (V 1.0): oracle 10.8 (1.142 s) | SYN-6B 11.2 (0.872 s) | x2 12.0 (0.621 s) | /2 10.9 (1.231 s) | SYN-K 10.9 | KF-OPT 12.1 | KF-FIX 10.9 | KF-CLAIR 10.9
+B_throttle seg 1 (V 16.0): oracle 20.6 (3.721 s) | SYN-6B 21.5 (3.321 s) | x2 22.4 (2.341 s) | /2 23.0 (4.725 s) | SYN-K 21.6 | KF-OPT 22.2 | KF-FIX 29.0 | KF-CLAIR 21.4
+B_throttle seg 2 (V 0.0625): oracle 7.1 (0.536 s) | SYN-6B 7.3 (0.403 s) | x2 7.9 (0.287 s) | /2 7.1 (0.568 s) | SYN-K 7.1 | KF-OPT 10.6 | KF-FIX 7.9 | KF-CLAIR 7.0
+   transients (first 40 s), mean RMS millideg: SYN-6B [14.6, 23.7, 8.4] KF-FIX [12.5, 31.9, 8.6] KF-CLAIR [12.5, 22.5, 7.6]
+C_gyrobias seg 0 (V 1.0): oracle 11.2 (0.839 s) | SYN-6B 11.3 (0.872 s) | x2 12.0 (0.621 s) | /2 13.5 (1.231 s) | SYN-K 12.2 | KF-OPT 10.8 | KF-FIX 10.9 | KF-CLAIR 10.9
+C_gyrobias seg 1 (V 1.0): oracle 10.6 (1.069 s) | SYN-6B 10.7 (0.898 s) | x2 11.4 (0.638 s) | /2 10.8 (1.268 s) | SYN-K 10.6 | KF-OPT 10.5 | KF-FIX 10.6 | KF-CLAIR 10.6
+C_gyrobias seg 2 (V 1.0): oracle 10.5 (1.126 s) | SYN-6B 10.8 (0.889 s) | x2 11.6 (0.632 s) | /2 10.6 (1.254 s) | SYN-K 10.6 | KF-OPT 10.6 | KF-FIX 10.6 | KF-CLAIR 10.6
+   transients (first 40 s), mean RMS millideg: SYN-6B [86.0, 11.4, 10.8] KF-FIX [12.6, 11.2, 10.4] KF-CLAIR [12.6, 11.2, 10.4]
+
+== Hypotheses ==
+H6b.1 A_steady seg 0: tau/oracle 0.776, regret 3.8 % -> pass
+H6b.1 A_steady seg 1: tau/oracle 0.864, regret 1.8 % -> pass
+H6b.1 A_steady seg 2: tau/oracle 0.766, regret 3.0 % -> pass
+H6b.1 B_throttle seg 0: tau/oracle 0.776, regret 3.8 % -> pass
+H6b.1 B_throttle seg 1: tau/oracle 0.925, regret 2.1 % -> pass
+H6b.1 B_throttle seg 2: tau/oracle 0.754, regret 2.9 % -> pass
+H6b.2 exponent seg1 0.505, seg2 0.474 (0.5 +/- 0.1)
+H6b.3 A: SYN-6B / KF-OPT [1.039, 1.018, 1.02] (<= 1.10)
+H6b.4 B: SYN-6B / KF-FIX [1.033, 0.742, 0.928] (< 1 in seg 1, 2); SYN-6B / KF-CLAIR [1.033, 1.007, 1.037] (<= 1.10)
+H6b.5 C seg 0: tau/oracle 1.057, regret 0.1 % -> pass
+H6b.5 C seg 1: tau/oracle 0.864, regret 1.8 % -> pass
+H6b.5 C seg 2: tau/oracle 0.766, regret 3.0 % -> pass
+H6b.6 6b_x2 A_steady seg 0: tau/oracle 0.552, regret 13.0 % -> FAIL
+H6b.6 6b_x2 A_steady seg 1: tau/oracle 0.615, regret 5.7 % -> FAIL
+H6b.6 6b_x2 A_steady seg 2: tau/oracle 0.545, regret 11.4 % -> FAIL
+H6b.6 6b_x2 B_throttle seg 0: tau/oracle 0.552, regret 13.0 % -> FAIL
+H6b.6 6b_x2 B_throttle seg 1: tau/oracle 0.651, regret 8.6 % -> FAIL
+H6b.6 6b_x2 B_throttle seg 2: tau/oracle 0.538, regret 11.1 % -> FAIL
+H6b.6 6b_d2 A_steady seg 0: tau/oracle 1.090, regret 2.0 % -> pass
+H6b.6 6b_d2 A_steady seg 1: tau/oracle 1.218, regret 1.3 % -> pass
+H6b.6 6b_d2 A_steady seg 2: tau/oracle 1.077, regret 0.9 % -> pass
+H6b.6 6b_d2 B_throttle seg 0: tau/oracle 1.090, regret 2.0 % -> pass
+H6b.6 6b_d2 B_throttle seg 1: tau/oracle 1.317, regret 5.7 % -> pass
+H6b.6 6b_d2 B_throttle seg 2: tau/oracle 1.060, regret 1.1 % -> pass
+
+== Verdict ==
+H6b.1: HOLDS
+H6b.2: HOLDS
+H6b.3: HOLDS
+H6b.4: HOLDS
+H6b.5: HOLDS
+H6b.6: FAILS
