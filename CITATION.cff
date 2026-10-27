@@ -16,9 +16,7 @@ abstract: >-
   x256), at parity with a tuned Kalman filter under steady vibration, and beats a fixed-noise
   Kalman filter when the vibration rises; on logs of a real quadrotor on the ground, the measured noise and drift
   matrices predict that estimating roll and pitch jointly, as an EKF does, would gain under 0.5 % (RMS) over the
-  law axis by axis; with a gyro drift smoother than a random walk, the generalized law, with its memory index
-  measured once at rest, predicts the change of exponent and lands on the optimum where the square root fails. The
-  law has not yet run as an estimator on hardware. The
+  law axis by axis. The law has not yet run as an estimator on hardware. The
   hypothesis under test is portability across machines of different physics and, for the law, the living.
 authors:
   - family-names: "Bronsard"

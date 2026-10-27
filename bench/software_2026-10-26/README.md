@@ -3,7 +3,7 @@
 The syntonic engine against adaptive estimators on synthetic fractional Brownian targets (steps 0 to 4), the
 quadrotor substrate in simulation (steps 5 to 6d) and cross-axis coupling on logged data of the X500 (step 7).
 Each pre-registered script carries its hypotheses and decision rule in its docstring and prints its own SHA-256
-at the top of its results; the hashes of the exploratory scripts of step 7 are listed in NOTE.md, section 12. `NOTE.md` is the bench note (version 1.5), `results/` holds every table as printed
+at the top of its results; the hashes of the exploratory scripts of steps 7 and 6d are listed in NOTE.md, sections 12 and 14. `NOTE.md` is the bench note (version 1.5), `results/` holds every table as printed
 (`*_results.txt`) and the per-seed rows (`*_rows.json`). The 110 MB bank checkpoints are not included; the
 scripts recompute them.
 
@@ -36,7 +36,7 @@ python run_step7.py                      # step 7: coupling on logged X500 data 
 
 Steps 5 to 6d are the quadrotor substrate in software (NOTE.md, sections 9 to 11, 13 and 14); step 6b reads the oracle
 and competitor rows of step 6 and checks that its own recomputation of the flown filter matches them exactly, and
-step 6c checks that its square-root variant reproduces the rows of step 6b, step 6d that its replay reproduces step 6c.
+step 6c checks that its square-root variant reproduces the rows of step 6b, and the judge of step 6d that its replay reproduces step 6c.
 Step 7 (NOTE.md, section 12) runs on three logged sessions of the X500, reduced in `data/` to the columns the
 scripts use (no position); `run_step7.py` unpacks them and runs the five step-7 scripts unchanged.
 
