@@ -1,0 +1,16 @@
+(a) law against a fixed window of its own length (per seed, oracle sweep interpolated in log tau); RMS in millidegrees
+  REPLAY seg 0: law 10.6, fixed at its own window 10.5 (law / fixed 1.006; law worse in 5 seeds of 10)
+  REPLAY seg 1: law 54.9, fixed at its own window 60.5 (law / fixed 0.908; law worse in 4 seeds of 10)
+  REPLAY seg 2: law 7.2, fixed at its own window 7.1 (law / fixed 1.012; law worse in 9 seeds of 10)
+  M0     seg 0: law 10.6, fixed at its own window 10.5 (law / fixed 1.005; law worse in 5 seeds of 10)
+  M0     seg 1: law 48.5, fixed at its own window 43.7 (law / fixed 1.110; law worse in 7 seeds of 10)
+  M0     seg 2: law 7.2, fixed at its own window 7.2 (law / fixed 1.013; law worse in 10 seeds of 10)
+  M1     seg 0: law 10.3, fixed at its own window 10.3 (law / fixed 1.004; law worse in 7 seeds of 10)
+  M1     seg 1: law 41.7, fixed at its own window 41.8 (law / fixed 0.998; law worse in 4 seeds of 10)
+  M1     seg 2: law 7.1, fixed at its own window 7.0 (law / fixed 1.010; law worse in 9 seeds of 10)
+
+(b) change of the oracle exponent with H, M1 as the H = 1/2 reference
+  1 -> 256: U60 0.484 - M1 0.556 = -0.072; U' predicts -0.045
+  1 -> 256: U75 0.441 - M1 0.556 = -0.115; U' predicts -0.100
+  1 -> 1/16: U60 0.409 - M1 0.435 = -0.026; U' predicts -0.045
+  1 -> 1/16: U75 0.346 - M1 0.435 = -0.089; U' predicts -0.100

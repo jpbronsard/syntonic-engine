@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.4. 26 and 27 October 2026. SyntonicAI Recherche.
+Bench note, version 1.5. 26 and 27 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -14,6 +14,8 @@ estimator, or the rate path, need the matrix law?), with the TH44 collapse certi
 Version 1.4 (27 Oct) adds section 13, step 6c: a pre-registered ablation of the attitude-estimator law (the
 exponent, a fixed horizon, a x256 rise of the vibration). Four of five hypotheses hold, the exponent test at the edge
 of its band; the predicted window fails at x256.
+Version 1.5 (27 Oct) adds section 14, step 6d: the mechanism of the step-6c failure, and whether the generalized law
+U' predicts a change of exponent. Five of seven hypotheses hold; the two mechanism hypotheses fail.
 
 ## 1. Purpose and verdict
 
@@ -423,4 +425,84 @@ repository, to be checked) suggests the integral path dominates: the Allan drift
 above the rest value, so measuring the drift out to tens of seconds would not close the gap alone. The next test must
 address the bias channel (its gain, or the bias walk entered as a second fact) as well as the scale of the drift, or
 let H be measured as U' allows, pre-registered against the same rows.
+
+## 14. Step 6d (27 Oct 2026): the mechanism of the 6c failure, and the exponent of U'
+
+`step6d_uprime_mechanism.py` (SHA-256 c6e49019) and its judge `evaluate_step6d.py` (8491bf7c), pre-registered and
+pushed to GitHub (commit a1c22e9, 19:11 UTC) before the full run. The smoke run (U75, two seeds) printed only the
+fractional-noise variance check, H and lambda_H measured at rest (0.70 against 0.75 on both seeds; 0.86 and 0.91 of
+the true lambda_H) and whether each oracle optimum lay inside its grid; no hypothesis was amended. Results in
+`results/step6d_results.txt`, rows in `results/step6d_rows.json`, run log in `results/step6d_run.log`. Exploratory
+readings after the verdict: `step6d_exploratory.py` (01c5e644), output `results/step6d_exploratory.txt`.
+
+The questions. (M) Step 6c attributed the overshoot at x256 to the gyro's bias random walk acting through the bias
+integral tied to the window; arm M tests that. (U) Theorem U' gives the exponent 1/(2H+1) for a first-order window on
+a drift of index H in (0, 1); step 6c's setting lies outside it (a bias random walk, two coupled timescales). Arm U
+puts the attitude estimator inside U': the gyro's drift is fractional Brownian motion of index H = 0.6 or 0.75 with
+lambda_H set so that the nominal window is step 6's 1.08 s, no bias, and the filter is Mahony without bias integral,
+which is exactly a first-order window on z. Scenario W of step 6c throughout (V = 1, 256, 1/16; 180 s segments, steady
+part the last 120 s), same accelerometer noise and attitude truth (same random streams), seeds 600..609. Criterion
+(as H6b.1 and H6c.4): window within x1.5 of the swept oracle and regret <= 10 %, seed medians, per segment.
+
+Arm M (6b's law: tau = sqrt(s2 / lambda_hat)). REPLAY reproduces step 6c (H6d.0 holds, 4e-15 deg). M0: the step-6c
+data with the bias walk switched off, Mahony with the tied integral. M1: the step-6c data, the filter given the true
+bias, no integral.
+
+| Row | Oracle (window) | Law (window) | tau / oracle | regret |
+|---|---|---|---|---|
+| REPLAY, V 256 | 49.2 (8.05 s) | 54.9 (13.3 s) | 1.65 | 10.2 % |
+| M0, V 256 | 39.9 (19.1 s) | 48.5 (13.3 s) | 0.71 | 27.4 % |
+| M1, V 256 | 37.8 (20.5 s) | 41.7 (13.3 s) | 0.67 | 3.6 % |
+
+RMS in millidegrees, steady part, mean over ten seeds; windows are seed medians. At V = 1 and 1/16 the law passes in
+all three rows. Oracle exponent from V = 1 to 256: 0.387 (REPLAY), 0.530 (M0), 0.556 (M1).
+
+- H6d.1 fails: in M0 the oracle exponent returns to 0.530 (inside [0.45, 0.55]), but the law's regret at V = 256 is
+  27.4 %.
+- H6d.2 fails: in M1 the law passes the window criterion in all three segments (regret 1.6, 3.6, 2.5 %), but the
+  oracle exponent is 0.556, outside [0.45, 0.55].
+- The pre-registered reading rule ("if H6d.1 fails, the cause lies elsewhere: the noise estimate or the vibration
+  model") does not fit these rows: M1 uses the same noise estimate and the same vibration and passes the window
+  criterion. Exploratory reading (step6d_exploratory.py, not pre-registered): at V = 256 the law in M0 is 11 % worse
+  than a fixed window of its own length (7 seeds of 10), while in M1 it equals it (0.998). Removing the bias walk
+  restores the long optimum (19 to 20 s instead of 8 s), so the walk is what shortened it in 6c; with the bias integral
+  tied to the window, the law loses about 11 % when its window has to move fifteenfold, whether or not the walk is
+  there. A plausible cause, not tested: the integral keeps a bias estimate learned with the short window and corrects
+  it with a time constant of about 13 tau, several minutes at these windows.
+
+Arm U (U' with the true inputs, ULAW-K; U' with H and lambda_H measured once at rest from 300 s and s2 live, ULAW; the
+square-root law of 6b on the same gyro, SQRT).
+
+| Row | H 0.6: windows (s) | H 0.6: regret | H 0.75: windows (s) | H 0.75: regret |
+|---|---|---|---|---|
+| Oracle | 1.06 / 13.3 / 0.53 | | 1.05 / 10.8 / 0.58 | |
+| U' predicted | 1.08 / 12.5 / 0.51 | | 1.08 / 9.33 / 0.56 | |
+| ULAW-K | as predicted | 0.1 / 5.9 / 0.0 % | as predicted | 0.2 / 6.0 / 0.0 % |
+| ULAW | 0.92 / 11.3 / 0.44 | 1.2 / 5.4 / 2.0 % | 0.95 / 8.40 / 0.50 | 1.2 / 4.3 / 1.6 % |
+| SQRT | 1.22 / 18.2 / 0.55 | 1.8 / 11.9 / 1.0 % | 2.08 / 29.6 / 0.94 | 16.4 / 26.2 / 28.3 % |
+
+Windows at V = 1 / 256 / 1/16, seed medians; regret, seed medians.
+
+- H6d.3 holds: ULAW-K passes in all segments (window 0.87 to 1.02 of the oracle).
+- H6d.4 holds: the oracle exponent from V = 1 to 256 is 0.484 for H = 0.6 (U' 0.455) and 0.441 for H = 0.75 (U' 0.400),
+  within 0.05.
+- H6d.5 holds: ULAW passes in all segments (window 0.73 to 0.89 of the oracle, regret 1.2 to 5.4 %), with H measured at
+  rest at 0.54 to 0.63 (true 0.6) and 0.70 to 0.79 (true 0.75), lambda_H at 0.82 to 1.09 of the truth.
+- H6d.6 holds: the square-root law fails at V = 256 for H = 0.75 (window 2.77 times the oracle, regret 26.2 %), and in
+  the other two segments as well; for H = 0.6 it fails at V = 256 (regret 11.9 %).
+- Reported: every oracle exponent sits above U''s value from V = 1 to 256 (by 0.03 to 0.06, including H = 1/2 in M0 and
+  M1) and below it from V = 1 to 1/16 (0.446, 0.435, 0.409, 0.346 against 0.500, 0.500, 0.455, 0.400). Exploratory,
+  with M1 as the H = 1/2 reference of the same class: the change of exponent from H = 1/2 to 0.75 is -0.115 (1 to 256)
+  and -0.089 (1 to 1/16) against -0.100 predicted; to 0.6, -0.072 and -0.026 against -0.045.
+
+What it means. Inside its class, U' predicts the change of exponent on the attitude estimator: when the gyro's drift
+is smoother than a random walk, the optimal window grows more slowly than the square root, as 1/(2H+1) says, and the
+law with H and lambda_H measured once at rest and the noise measured live lands on the optimum where the square root
+does not. The step-6c failure has two parts: the gyro's bias walk shortens the optimal window at long scales, and the
+bias integral tied to the window costs the law when its window moves far. For the engine on this substrate: measure H
+at the scale where the window sits (U'), and give the gyro bias its own channel instead of tying its gain to the
+window. Limits: one simulated axis, representative parameters, one generator family (not an independent test);
+fractional Brownian drift is a stand-in for real gyro low-frequency noise (angle random walk, bias instability, rate
+random walk); arm U has no bias channel; M1 gives the filter the true bias, a diagnostic, not a filter one can build;
+the constant offset of the oracle exponents (about +0.04 upward, -0.05 downward) is unexplained.
 

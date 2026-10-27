@@ -4,5 +4,5 @@
 estimate from Theorem U' of the Syntony Principle."""
 from .engine import SyntonicEngine, kappa_H, C_H, loop_delay, window_floor
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 __all__ = ['SyntonicEngine', 'kappa_H', 'C_H', 'loop_delay', 'window_floor']

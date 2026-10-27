@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4 (27 Oct 2026)
+
+Bench and documentation only; the code is that of 0.2.0.
+
+- Software bench, step 6d (`bench/software_2026-10-26/`, note version 1.5, section 14; rules and judge pushed to GitHub before the full run): the mechanism of the step-6c failure, and whether the generalized law U' predicts a change of exponent, in simulation on the generator of steps 6 to 6c. Five of seven hypotheses hold. U': with a fractional gyro drift (H = 0.6 and 0.75, no bias, a first-order window), the best window's exponent from nominal to x256 vibration is 0.484 and 0.441 against 0.455 and 0.400 predicted (within 0.05); U' with the true inputs and with H and lambda_H measured once at rest lands on the optimum in every segment; the square-root law fails (the control). Mechanism, both hypotheses failed: without the gyro's bias walk the best window at x256 returns from 8.0 to 19.1 s, but the law with the bias integral tied to the window loses 27.4 % there; with the true bias and no integral it lands within 3.6 %, and the best exponent is 0.556, outside its band. Read after the verdict (`step6d_exploratory.py`): the tied bias integral costs the law about 11 % when its window moves fifteenfold.
+- README: the announcement, "What is claimed, and what is not" and the attitude-estimator section carry step 6d; the cause of the step-6c failure is restated from it. Bench README: run lines. CITATION.cff abstract. Version strings 0.2.4 (Python package, Rust crate, CITATION.cff).
+
 ## 0.2.3 (27 Oct 2026)
 
 Bench and documentation only; the code is that of 0.2.0.
