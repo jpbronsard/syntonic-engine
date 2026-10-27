@@ -1,0 +1,32 @@
+step6d_uprime_mechanism.py  sha256 c6e49019a5f9c787143b43fb337fd557dff1fe47a282617bfa76a768314be5aa
+  REPLAY t = 90 s  (8 s)
+  REPLAY t = 180 s  (17 s)
+  REPLAY t = 270 s  (25 s)
+  REPLAY t = 360 s  (34 s)
+  REPLAY t = 450 s  (42 s)
+REPLAY: runtime 51 s
+  M0 t = 90 s  (9 s)
+  M0 t = 180 s  (17 s)
+  M0 t = 270 s  (25 s)
+  M0 t = 360 s  (33 s)
+  M0 t = 450 s  (42 s)
+M0: runtime 50 s
+  M1 t = 90 s  (8 s)
+  M1 t = 180 s  (15 s)
+  M1 t = 270 s  (22 s)
+  M1 t = 360 s  (29 s)
+  M1 t = 450 s  (37 s)
+M1: runtime 44 s
+  U60 t = 90 s  (10 s)
+  U60 t = 180 s  (20 s)
+  U60 t = 270 s  (29 s)
+  U60 t = 360 s  (39 s)
+  U60 t = 450 s  (48 s)
+U60: runtime 57 s
+  U75 t = 90 s  (9 s)
+  U75 t = 180 s  (20 s)
+  U75 t = 270 s  (29 s)
+  U75 t = 360 s  (39 s)
+  U75 t = 450 s  (48 s)
+U75: runtime 57 s
+written /home/claude/syntonic-engine/bench/software_2026-10-26/results/step6d_rows.json
