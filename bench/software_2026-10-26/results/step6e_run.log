@@ -1,0 +1,19 @@
+step6e_uprime_powered.py  sha256 d1f84d61079f0966325c820e6f880dae2428334ddf2a530c4f90ec530ce0c20d
+  U50 seeds 1000..1024 done (67 s)
+  U50 seeds 1025..1049 done (67 s)
+  U50 seeds 1050..1074 done (132 s)
+  U50 seeds 1075..1099 done (132 s)
+  U60 seeds 1000..1024 done (196 s)
+  U60 seeds 1025..1049 done (197 s)
+  U60 seeds 1050..1074 done (258 s)
+  U60 seeds 1075..1099 done (259 s)
+  U75 seeds 1000..1024 done (321 s)
+  U75 seeds 1025..1049 done (322 s)
+  U75 seeds 1050..1074 done (384 s)
+  U75 seeds 1075..1099 done (384 s)
+  U90 seeds 1000..1024 done (447 s)
+  U90 seeds 1025..1049 done (447 s)
+  U90 seeds 1050..1074 done (507 s)
+  U90 seeds 1075..1099 done (507 s)
+runtime 507 s
+written /home/claude/syntonic-engine/bench/software_2026-10-26/results/step6e_rows.json

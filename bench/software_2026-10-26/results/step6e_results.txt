@@ -1,0 +1,67 @@
+evaluate_step6e.py sha256 75b01afbcc7a3ef04b77b0d6879688782cea1abcd0b4f5eed511631a20546ded
+step6e script sha256 d1f84d61079f0966325c820e6f880dae2428334ddf2a530c4f90ec530ce0c20d
+
+100 seeds per arm, paired; bootstrap 2000 draws over seeds (95 % percentile intervals)
+
+== U50: H = 0.5, p_H = 0.500; H at rest mean 0.500 (range 0.405..0.571), lambda_H at rest / true median 1.010
+  population optimum tau_opt (s): [1.059, 16.503, 0.501]  at a grid edge: [False, False, False]  RMS at the optimum (mdeg): [10.4, 39.1, 7.0]
+  exponent up 0.509 [0.493, 0.527]   down 0.454 [0.436, 0.474]   predicted 0.500
+  POW_U  regret % per segment [1.8, 1.4, 2.3]
+  POW_S  regret % per segment [1.8, 1.4, 2.3]
+  ULAW   regret % per segment [2.0, 2.1, 2.4]
+  ULAW_K regret % per segment [0.0, 0.0, 0.1]
+  ULAW window / tau_opt (seed median) [0.827, 0.787, 0.795]
+  J(POW-U) / J(POW-S) at V = 256: 1.000 [1.000, 1.000]
+
+== U60: H = 0.6, p_H = 0.455; H at rest mean 0.600 (range 0.507..0.681), lambda_H at rest / true median 1.012
+  population optimum tau_opt (s): [1.056, 13.005, 0.534]  at a grid edge: [False, False, False]  RMS at the optimum (mdeg): [9.9, 42.2, 6.5]
+  exponent up 0.465 [0.451, 0.480]   down 0.414 [0.396, 0.432]   predicted 0.455
+  POW_U  regret % per segment [1.7, 1.5, 2.2]
+  POW_S  regret % per segment [2.1, 0.1, 3.9]
+  ULAW   regret % per segment [1.9, 2.3, 2.3]
+  ULAW_K regret % per segment [0.0, 0.0, 0.1]
+  ULAW window / tau_opt (seed median) [0.844, 0.811, 0.816]
+  J(POW-U) / J(POW-S) at V = 256: 1.028 [1.009, 1.049]
+
+== U75: H = 0.75, p_H = 0.400; H at rest mean 0.746 (range 0.660..0.846), lambda_H at rest / true median 0.981
+  population optimum tau_opt (s): [1.055, 9.808, 0.576]  at a grid edge: [False, False, False]  RMS at the optimum (mdeg): [9.5, 46.4, 5.9]
+  exponent up 0.413 [0.399, 0.427]   down 0.367 [0.347, 0.389]   predicted 0.400
+  POW_U  regret % per segment [1.6, 1.8, 1.9]
+  POW_S  regret % per segment [2.5, 3.4, 6.5]
+  ULAW   regret % per segment [1.7, 2.8, 2.1]
+  ULAW_K regret % per segment [0.0, 0.1, 0.0]
+  ULAW window / tau_opt (seed median) [0.879, 0.827, 0.846]
+  J(POW-U) / J(POW-S) at V = 256: 0.969 [0.920, 1.023]
+
+== U90: H = 0.9, p_H = 0.357; H at rest mean 0.881 (range 0.785..0.968), lambda_H at rest / true median 0.861
+  population optimum tau_opt (s): [1.06, 7.757, 0.605]  at a grid edge: [False, False, False]  RMS at the optimum (mdeg): [9.1, 50.4, 5.5]
+  exponent up 0.369 [0.355, 0.383]   down 0.340 [0.309, 0.374]   predicted 0.357
+  POW_U  regret % per segment [1.4, 1.8, 1.5]
+  POW_S  regret % per segment [2.9, 14.0, 9.1]
+  ULAW   regret % per segment [2.1, 4.1, 2.2]
+  ULAW_K regret % per segment [-0.0, 0.1, -0.0]
+  ULAW window / tau_opt (seed median) [0.936, 0.907, 0.926]
+  J(POW-U) / J(POW-S) at V = 256: 0.797 [0.721, 0.893]
+
+== Hypotheses
+H6e.1 slope of the upward exponents on p_H: b = 0.976 [0.888, 1.072]; in [0.7, 1.3]: True; interval excludes 0: True
+   reported: slope of the downward exponents b = 0.806 [0.580, 0.998]
+H6e.2 U50: |e - p_H| = 0.009 (<= 0.05: True)
+H6e.2 U60: |e - p_H| = 0.011 (<= 0.05: True)
+H6e.2 U75: |e - p_H| = 0.013 (<= 0.05: True)
+H6e.2 U90: |e - p_H| = 0.012 (<= 0.05: True)
+H6e.3 U75: upward exponent interval [0.399, 0.427] excludes 0.5: True
+H6e.3 U90: upward exponent interval [0.355, 0.383] excludes 0.5: True
+H6e.4 U75: J(POW-U)/J(POW-S) at V = 256 = 0.969 [0.920, 1.023], entirely below 1: False
+H6e.4 U90: J(POW-U)/J(POW-S) at V = 256 = 0.797 [0.721, 0.893], entirely below 1: True
+H6e.5 U50: ULAW regret % [2.0, 2.1, 2.4], window ratio [0.827, 0.787, 0.795] -> pass
+H6e.5 U60: ULAW regret % [1.9, 2.3, 2.3], window ratio [0.844, 0.811, 0.816] -> pass
+H6e.5 U75: ULAW regret % [1.7, 2.8, 2.1], window ratio [0.879, 0.827, 0.846] -> pass
+H6e.5 U90: ULAW regret % [2.1, 4.1, 2.2], window ratio [0.936, 0.907, 0.926] -> pass
+
+== Verdict
+H6e.1: HOLDS
+H6e.2: HOLDS
+H6e.3: HOLDS
+H6e.4: FAILS
+H6e.5: HOLDS
