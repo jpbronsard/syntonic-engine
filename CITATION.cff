@@ -5,21 +5,24 @@ title: "Syntonic Engine: one formula, three facts about the machine, no tuning"
 abstract: >-
   One formula, three facts about the machine, no tuning: the engine sets the time window of a correction or an
   estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the
-  Syntony Principle); its only machine-specific inputs are the loop timing and delay, the actuator's authority
-  and access to the read noise. The law sets a window, not a loop gain; stability stays with the machine.
+  Syntony Principle); its only machine-specific inputs are three facts measured once: the loop timing and delay,
+  the actuator's authority in a correction loop or the fast sensor's drift in an estimator, and access to the
+  read noise. The law sets a window, not a loop gain; stability stays with the machine.
   Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On
   synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
-  second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip. The
+  second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip; in a
+  simulated quadrotor attitude estimator, with the gyro's drift measured once at rest, it lands within a few percent
+  of the best fixed window and beats a fixed-noise Kalman filter when the vibration changes. The
   hypothesis under test is portability across machines of different physics and, for the law, the living.
 authors:
   - family-names: "Bronsard"
     given-names: "Jean-Pierre"
     orcid: "https://orcid.org/0009-0008-6639-7553"
     affiliation: "SyntonicAI Recherche, Montréal, QC, Canada"
-version: "0.2.1"
+version: "0.2.2"
 doi: "10.5281/zenodo.23549689"
 url: "https://doi.org/10.5281/zenodo.23549689"
-date-released: 2026-10-26
+date-released: 2026-10-27
 license: Apache-2.0
 repository-code: "https://github.com/jpbronsard/syntonic-engine"
 keywords:
