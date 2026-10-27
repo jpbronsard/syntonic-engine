@@ -1,0 +1,38 @@
+step7_axis_coupling.py sha256 ff76fe253e505aebedc08e86ea293b1b35e2c4ddbe652d9f38c147c4100a0ed3
+records 33631, duration 135.2 s, record period 4.00 ms, armed 0..1
+runs: [('idle', 0, 5), ('throttle', 5, 45), ('idle', 45, 50), ('throttle', 50, 65), ('idle', 65, 100), ('throttle', 100, 130), ('idle', 130, 140)]
+
+== idle: 55 s
+  Sigma per scale (diag, rad^2 s): {64: [3.5247375e-05, 2.2499754e-05], 128: [2.1072281e-05, 1.5170637e-05], 256: [2.2694708e-05, 1.5330904e-05]}
+  Q per scale (diag, rad^2/s): {128: [9.121e-09, 1.4158e-08], 256: [8.445e-09, 1.7778e-08], 512: [8.76e-09, 2.1751e-08], 1024: [1.2166e-08, 1.2016e-08]}
+  Sigma = [[ 2.634e-05 -1.152e-06]
+ [-1.152e-06  1.767e-05]]  rho_Sigma = -0.053
+  Q     = [[9.623e-09 2.023e-09]
+ [2.023e-09 1.643e-08]]  rho_Q = +0.161
+  commutator ratio ||[Q,S]|| / (||Q|| ||S||) = 0.0225
+  per-axis windows sqrt(S_ii/Q_ii) = [52.316, 32.796] s
+  T_sym = [[52.94  -4.501]
+ [-4.501 33.174]]   T_K = [[52.961 -4.855]
+ [-4.123 33.156]]
+  tr P: diag 1.0421e-06  sym 1.0361e-06  Kalman 1.0361e-06  ->  diag/K - 1 = 0.584 %,  sym/K - 1 = 0.004 %
+
+== throttle: 85 s
+  Sigma per scale (diag, rad^2 s): {64: [2.8724317e-05, 2.8695346e-05], 128: [2.4224902e-05, 2.1815609e-05], 256: [2.3140669e-05, 1.9633246e-05]}
+  Q per scale (diag, rad^2/s): {128: [9.2895e-08, 5.0155e-08], 256: [8.8778e-08, 3.4452e-08], 512: [1.06911e-07, 3.0249e-08], 1024: [1.18429e-07, 4.3478e-08]}
+  Sigma = [[2.536e-05 2.298e-06]
+ [2.298e-06 2.338e-05]]  rho_Sigma = +0.094
+  Q     = [[ 1.018e-07 -1.033e-08]
+ [-1.033e-08  3.958e-08]]  rho_Q = -0.163
+  commutator ratio ||[Q,S]|| / (||Q|| ||S||) = 0.0605
+  per-axis windows sqrt(S_ii/Q_ii) = [15.788, 24.304] s
+  T_sym = [[15.966  2.471]
+ [ 2.471 24.632]]   T_K = [[15.987  3.114]
+ [ 2.088 24.623]]
+  tr P: diag 2.5685e-06  sym 2.5485e-06  Kalman 2.5477e-06  ->  diag/K - 1 = 0.817 %,  sym/K - 1 = 0.032 %
+
+== D3, random SPD pairs (1000): sym/K - 1  min 1.05e-08  median 2.752e-02  max 8.716e-01 ; fraction > 1e-9: 1.000 ; commuting case: 2.2e-16
+   corr(log gap, log commutator) = 0.96
+
+== Decisions
+D2: throttle regime, per-axis excess over the two-axis Kalman = 0.817 % -> per-axis law enough here (at or under 5 %)
+D3: measured, sym/K - 1 = idle 0.0038 %, throttle 0.0318 %; random pairs: T_K never worse (min gap 1.0e-08), gap > 0 in 100.0 % of pairs

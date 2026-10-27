@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.2. 26 and 27 October 2026. SyntonicAI Recherche.
+Bench note, version 1.3. 26 and 27 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -9,6 +9,8 @@ noise floor where the bench scripts fitted all of them. No conclusion changes; t
 Version 1.2 (27 Oct) adds sections 9 to 11, the quadrotor substrate in software: step 5 (the rate loop, where the
 law has nothing to decide), step 6 (the attitude estimator, where the law holds and the engine's identification
 fails) and step 6b (the attitude estimator with the gyro drift as a fact measured once at rest, where it passes).
+Version 1.3 (27 Oct) adds section 12, step 7: cross-axis coupling on logged data of the X500 (does the attitude
+estimator, or the rate path, need the matrix law?), with the TH44 collapse certificate on three axes.
 
 ## 1. Purpose and verdict
 
@@ -255,3 +257,94 @@ RMS angle error in millidegrees on the steady parts, mean over ten seeds; window
 - Reported, not judged: after the x16 rise the transient RMS (first 40 s) is 23.7 against 31.9 for the fixed-noise Kalman and 22.5 for the clairvoyant one; at start with the uncalibrated bias the bias integral is slow, 86 against 12.6 for the Kalman, which carries an explicit bias state. The bias channel, with its gain tied to the window, is the weak point.
 
 What it means. On the attitude estimator the window law holds and reaches parity with a tuned Kalman, and it keeps the optimum when the vibration changes, where a Kalman with fixed noise parameters loses up to a third. The engine's own identification does not carry to this substrate: the drift must enter as a fact measured once (the gyro's angle random walk), and only the noise is measured live. The portability hypothesis in its strict form, the same code identification included, is therefore refuted on this substrate in software; it survives as the same law with facts measured once per machine. Not tested here: the U' exponent measurement (H is fixed at 1/2 by the sensor), gyro noise that rises with throttle, and everything a real gimbal adds (lever arm, frame resonances, measured vibration spectra). The gimbal bench, with an encoder per axis as truth, is the next test.
+
+## 12. Step 7 (27 Oct 2026): cross-axis coupling on logged data, and the TH44 certificate
+
+Scripts `step7_axis_coupling.py` (step 7a, SHA-256 ff76fe25, pre-registered), `step7c_rate3_th44.py` (step 7c,
+d1f43d53, pre-registered), `step7c_A1_exploratory.py` (36b249fb) and `step7c_A1_sensitivity.py` (02720e47),
+the amendment written after step 7c, and `step7_exploratory_symmetric.py` (10ebc0bf). The two pre-registered
+scripts print their SHA-256 at the top of their results; the three exploratory ones do not, and their hashes are
+the ones listed here. Run all of them with `run_step7.py`, which unpacks `data/`. Results in `results/step7*`.
+No smoke run; nothing was changed in a pre-registered script after it ran.
+
+The question. Steps 6 and 6b run the law one axis at a time. The matrix law (Syntony Principle V5.1, Theorem
+35.1: T Q T = kappa^2 Sigma, T = kappa (Q^-1 # Sigma), the geometric mean of Pusz and Woronowicz; kappa = 1
+below) is proven for coupled axes but not in the engine. Before building it: are the axes of this machine coupled
+enough to matter? An EKF estimates all axes jointly with a full covariance, so the same numbers say what that
+joint estimate is worth against the law run axis by axis.
+
+Method. No filter is run on the logs, which carry no truth. The noise and drift matrices are measured from
+second differences of block means, and the steady-state error of each window is predicted from them (filter
+xhat' = T^-1 (y - xhat) on a random walk measured with white noise, continuous Lyapunov equation, score tr P,
+a mean-square quantity). The build rule was written in mean square; RMS equivalents are given beside it
+(RMS = sqrt(1 + g) - 1 for a mean-square excess g).
+
+Data. Three sessions of the X500's SD logger (Pixhawk 6X, accelerometer at 250 Hz, gyroscope at 1 kHz),
+reduced in `data/` to the columns used, no position: session 6, motor test with 2 kg of ballast per leg,
+frame still, 0.5 to 1.2 A; session 5, propulsion on a held frame, 15 to 23 s at 0.436 throttle and 9.8 A;
+session 7, airborne from about 19 to 24.5 s, then a throttle cut and a crash whose cause lies outside the
+estimator. The flight window is not steady: throttle 0.41 to 0.56, current 10 to 20 A. The telemetry of the
+earlier flights (M5, M6, about 50 Hz) logs only per-axis noise and drift, with no cross-axis terms, so those
+flights cannot be examined this way. The SD log carries no magnetometer values, so yaw is covered on the rate
+side only.
+
+Step 7a, the attitude estimator, roll and pitch (session 6). Sigma, the 2x2 accelerometer-tilt noise, and Q, the
+2x2 gyro drift. Correlations: Sigma -0.05 and +0.09, Q +0.16 and -0.16 (idle, low throttle); commutator ratio
+0.02 and 0.06. Per-axis windows lose 0.58 % (idle) and 0.82 % (low throttle) in mean square against a two-axis
+Kalman filter (RMS 0.29 and 0.41 %). Rule D2 (5 % in mean square): the per-axis law is enough, no matrix-law
+bench for the estimator on these data. Limits: low throttle only, a still frame, windows of 16 to 52 s
+extrapolated beyond the scales measured (up to 1 s).
+
+Step 7c, the rate path, roll, pitch and yaw (pre-registered). The 3x3 white-noise intensity of the gyro is
+uncoupled in all three sessions: correlations at most 0.09 in magnitude, on the bench, at half throttle and in
+flight. The pre-registered estimate of the rate's random-walk intensity Lambda failed in all three windows:
+Lambda was not positive definite. This is attributed to the rotor vibration being narrowband rather than white,
+so that subtracting the short-scale noise over-corrects: at 32 ms in flight (yaw) and, on the held frames, at
+all three long scales (the roll term is negative at 32, 64 and 128 ms there); the attribution was not tested. As written, the
+build rule and the TH44 certificate were therefore not computed. This is a failure of the estimator, recorded as
+such.
+
+Amendment A1, exploratory (written after that run): Lambda from the 128 ms scale alone, without noise
+subtraction (the white-noise share of that scale in flight is 0.2 % on roll and pitch and 10 % on yaw). On the
+held frames Lambda is vibration residue, not motion, so only the flight counts. Session 7, 19 to 24 s (36 second
+differences at 128 ms), from `results/step7c_A1_results.txt` (90 % moving-block bootstrap, seed 78):
+
+- Correlations of the rate innovations: roll-pitch +0.76 (0.38 to 0.91), pitch-yaw +0.41 (0.24 to 0.64),
+  roll-yaw +0.11.
+- Per-axis windows against a three-axis Kalman filter: 10.6 % worse in mean square (4.1 to 18.7 %), above the
+  5 % line; RMS 5.2 % (2.0 to 8.9 %). The windows this implies are 1.9, 1.9 and 13.7 ms, about two gyro samples on
+  roll and pitch (the engine's own logged rate windows were 36 to 63 ms), so the continuous-time comparison is at
+  its edge there.
+- The symmetric matrix window T_sym = Lambda^-1 # Sn comes within 0.32 % of that Kalman filter (RMS 0.16 %).
+- TH44/VM-2 certificate (generator diag(1/tau) from the engine's logged windows, 42, 36 and 63 ms; R = Sigma =
+  Lambda T_env, T_env 1, 4 and 16 ms): the coupling raises chi by 7.3, 7.6 and 9.1 % (intervals from 1.8 to
+  20.9 %), and the collapse direction stays on yaw, share 0.997 (0.98 to 1.00). Yaw-pure, not mixed: yaw goes first
+  because its window is the slowest. The absolute chi is not interpreted, T_env being unidentified on this machine.
+- Shorter windows, from `results/step7c_A1_sensitivity.txt` (seed 79; it also recomputes 19 to 24 s with its own
+  draws, whose intervals differ from the above in the second digit). 19 to 23 s and 20 to 23 s: per-axis loss 7.6
+  and 8.0 % in mean square (3.0 to 11.8 and 3.5 to 10.4 %; RMS 3.7 and 3.9 %); roll-pitch +0.62 (-0.06 to 0.74) and
+  +0.65 (-0.25 to 0.68), intervals that cross zero; pitch-yaw +0.52 and +0.63; certificate at T_env 4 ms raised by
+  6.5 % (1.2 to 54.8 %) and 14.2 % (3.8 to 43.7 %); yaw share 0.994 and 0.983, with intervals reaching down to
+  0.80 and 0.86, below the 0.90 single-axis rule. The yaw-pure reading is not secure in the shorter windows.
+
+Reading: in the one flight logged at 1 kHz, the motion appeared coupled and the noise was not. A joint estimate
+is predicted to gain about 4 to 5 % in RMS on the rate path there (8 to 11 % in mean square), and the symmetric
+matrix law would capture nearly all of it. This rests on 3 to 5 s of an unsteady flight that ended in a crash, on
+predictions rather than filters run against a truth, and on an estimator amended after the pre-registered one
+failed: a hint, not a verdict.
+
+A point of theory (7a, D3, and the exploratory script). The V5.1 window T_sym = Q^-1 # Sigma and the steady-state
+Kalman window T_K = (P Sigma^-1)^-1, P = Sigma # Q, both satisfy T Q T^T = Sigma. T_sym is the best symmetric
+window, numerically: on 200 random 2x2 pairs a Nelder-Mead search over symmetric positive-definite windows,
+started at T_sym, finds nothing better than 2.4e-15. The unrestricted optimum T_K is not symmetric when Q and Sigma
+do not commute. In mean square, on 1000 random pairs (7a) the gap has a median of 2.75 % and a maximum of 87 %,
+and follows the commutator (correlation 0.96 in logarithms); on the 200 pairs of the exploratory script, median
+2.64 % and maximum 94.9 %. On the measured matrices it is small: 0.004 to 0.03 % on the attitude estimator, 0.3 to
+0.4 % on the flight rates.
+
+What it means. On this machine, in the regimes logged, the attitude estimator does not need the matrix law, and
+an EKF's joint estimate of roll and pitch is predicted to be worth under 0.5 % in RMS over the law axis by axis.
+On the rate path in flight a coupling of the motion appeared that the matrix law would handle; it needs a longer
+steady flight at 1 kHz to be measured with tight intervals, an innovation estimator written for narrowband
+vibration before the data, and magnetometer values in the log for yaw attitude. If the coupling holds, step 7b is
+a three-axis rate bench, per-axis law against matrix law, with the measured correlations.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3 (27 Oct 2026)
+
+Bench and documentation only; the code is that of 0.2.0.
+
+- Announcement at the top of the README: attitude estimation at Kalman parity with no tuning, pending the hardware test. Parity is in simulation (step 6b) with a two-state Kalman filter, the one-axis linear form of an EKF's fusion; it states what it is not: no hardware run of the law in an estimator, the Kalman core rather than PX4's EKF2 software, attitude only, one simulated axis, the drift fact needed and fragile when overestimated, slow learning of an uncalibrated gyro bias, and a few seconds of unsteady flight data.
+- Software bench, step 7 (`bench/software_2026-10-26/`, note version 1.3, section 12): cross-axis coupling on logged data of the X500, predicted from the noise and drift matrices measured on the logs (no filter is run against a truth). The logs, reduced to the columns used (no position), are in `data/`; `run_step7.py` reproduces every result file. Step 7a (pre-registered), on the ground with the frame still: on the attitude estimator, roll and pitch, per-axis windows are predicted 0.58 and 0.82 % behind a two-axis Kalman filter in mean square (0.29 and 0.41 % RMS), under the 5 % build threshold; no matrix-law bench for the estimator. Step 7c (pre-registered): the gyro noise is uncoupled across roll, pitch and yaw (correlations at most 0.09); the estimate of the rate's random-walk intensity failed on all three logs, so its rules were not applied. Amendment A1 (exploratory): in the one flight logged at 1 kHz the motion appeared coupled (roll-pitch +0.76; the interval crosses zero without the last second), per-axis windows are predicted 8 to 11 % behind a three-axis Kalman filter in mean square (4 to 5 % RMS) and the symmetric matrix law within 0.3 to 0.4 % (0.2 % RMS); the TH44 collapse certificate points to yaw alone over the full window, not to a mixed direction. A point of theory: the matrix law's window is the best symmetric window, and the joint Kalman window is not symmetric when the matrices do not commute.
+- README: the announcement, a section on cross-axis coupling, a sentence in "What is claimed, and what is not", the repository map. Bench README: scope, dependencies (pandas for step 7), run line. CITATION.cff abstract. Version strings 0.2.3 (Python package, Rust crate, CITATION.cff).
+
 ## 0.2.2 (27 Oct 2026)
 
 Bench and documentation only; the code is that of 0.2.0.

@@ -1,0 +1,33 @@
+
+== W1 bench: n(128 ms) = 653, n(256 ms) = 323; tau R/P/Y [73.0, 57.9, 75.6] ms
+  white-noise share of C(128) per axis: [2.261, 2.249, 1.709]; Lam PD: True
+  corr(Lam, 128 ms) = [[ 1.    -0.149  0.006] [-0.149  1.    -0.075] [ 0.006 -0.075  1.   ]]  | corr(256 ms) = [[ 1.    -0.172 -0.031] [-0.172  1.     0.034] [-0.031  0.034  1.   ]]
+  Lam diag 128 ms [5.1616e-05 2.9751e-05 1.6287e-05], 256 ms [1.2170e-05 5.4397e-06 2.7350e-06]
+  corr(Lam) off-diagonals RP, RY, PY 90 % boot: -0.24..-0.07, -0.08..+0.09, -0.15..+0.00
+  commutator 0.0374; per-axis windows [64.16, 63.99, 55.78] ms
+  D2r: per-axis / 3-axis Kalman - 1 = 0.123 % (90 % 0.044 .. 0.450 %, 400 draws)
+  D4 T_env 1 ms: factor +0.045 % (90 % +0.004 .. +0.189), v_c shares R/P/Y [0.0, 0.001, 0.999] -> single-axis (largest share 90 % 0.994..1.000); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 4 ms: factor +0.047 % (90 % +0.004 .. +0.197), v_c shares R/P/Y [0.0, 0.001, 0.999] -> single-axis (largest share 90 % 0.994..1.000); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 16 ms: factor +0.055 % (90 % +0.004 .. +0.229), v_c shares R/P/Y [0.0, 0.001, 0.999] -> single-axis (largest share 90 % 0.994..1.000); per-axis v_c [0.0, 0.0, 1.0]
+
+== W2 thrust: n(128 ms) = 60, n(256 ms) = 29; tau R/P/Y [30.9, 44.0, 60.6] ms
+  white-noise share of C(128) per axis: [7.056, 1.501, 0.574]; Lam PD: True
+  corr(Lam, 128 ms) = [[ 1.    -0.207 -0.304] [-0.207  1.     0.228] [-0.304  0.228  1.   ]]  | corr(256 ms) = [[ 1.    -0.489 -0.323] [-0.489  1.     0.012] [-0.323  0.012  1.   ]]
+  Lam diag 128 ms [0.0005 0.0021 0.0021], 256 ms [0.0001 0.0009 0.0005]
+  corr(Lam) off-diagonals RP, RY, PY 90 % boot: -0.43..+0.02, -0.49..-0.11, -0.11..+0.49
+  commutator 0.1456; per-axis windows [113.33, 52.27, 32.31] ms
+  D2r: per-axis / 3-axis Kalman - 1 = 1.350 % (90 % 0.430 .. 5.133 %, 400 draws)
+  D4 T_env 1 ms: factor +2.411 % (90 % +0.461 .. +7.926), v_c shares R/P/Y [0.125, 0.006, 0.869] -> mixed (largest share 90 % 0.651..0.980); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 4 ms: factor +2.531 % (90 % +0.484 .. +8.324), v_c shares R/P/Y [0.125, 0.006, 0.869] -> mixed (largest share 90 % 0.651..0.980); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 16 ms: factor +3.053 % (90 % +0.583 .. +10.051), v_c shares R/P/Y [0.127, 0.006, 0.866] -> mixed (largest share 90 % 0.648..0.980); per-axis v_c [0.0, 0.0, 1.0]
+
+== W3 flight: n(128 ms) = 36, n(256 ms) = 17; tau R/P/Y [41.7, 35.6, 63.2] ms
+  white-noise share of C(128) per axis: [0.002, 0.002, 0.103]; Lam PD: True
+  corr(Lam, 128 ms) = [[1.    0.76  0.107] [0.76  1.    0.414] [0.107 0.414 1.   ]]  | corr(256 ms) = [[1.    0.712 0.06 ] [0.712 1.    0.313] [0.06  0.313 1.   ]]
+  Lam diag 128 ms [6.9647 5.6786 0.0401], 256 ms [1.0521 0.582  0.0592]
+  corr(Lam) off-diagonals RP, RY, PY 90 % boot: +0.38..+0.91, +0.07..+0.46, +0.24..+0.64
+  commutator 0.1113; per-axis windows [1.94, 1.88, 13.68] ms
+  D2r: per-axis / 3-axis Kalman - 1 = 10.628 % (90 % 4.053 .. 18.668 %, 400 draws)
+  D4 T_env 1 ms: factor +7.276 % (90 % +1.811 .. +16.617), v_c shares R/P/Y [0.001, 0.002, 0.997] -> single-axis (largest share 90 % 0.983..1.000); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 4 ms: factor +7.626 % (90 % +1.897 .. +17.417), v_c shares R/P/Y [0.001, 0.002, 0.997] -> single-axis (largest share 90 % 0.983..1.000); per-axis v_c [0.0, 0.0, 1.0]
+  D4 T_env 16 ms: factor +9.139 % (90 % +2.272 .. +20.903), v_c shares R/P/Y [0.001, 0.002, 0.997] -> single-axis (largest share 90 % 0.982..1.000); per-axis v_c [0.0, 0.0, 1.0]

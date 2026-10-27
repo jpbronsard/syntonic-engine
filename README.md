@@ -11,11 +11,32 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 *MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB, CC BY-SA 4.0).*
 
+> **27 October 2026: attitude estimation at Kalman parity, with no tuning. Pending the hardware test.**
+>
+> Placed in a plain Mahony attitude filter, the window law matches a two-state (angle, gyro bias) Kalman filter, the one-axis linear form of the fusion an EKF performs:
+>
+> - **In simulation** (bench step 6b, one axis, representative parameters) its RMS error is within 2 to 4 % of a Kalman filter tuned for the test under steady vibration, and within 4 % of one told the true noise level when the vibration changes. When the vibration rises sixteenfold it has 26 % less error than a Kalman filter with fixed noise settings, the way PX4's EKF2 is configured; at nominal vibration it is 3 % behind that filter.
+> - **On logs of our X500 on the ground** (step 7a: motor test, frame still, low throttle), the noise and drift matrices measured on roll and pitch predict the law run axis by axis within 0.3 to 0.4 % (RMS) of a joint estimate of both axes, as an EKF makes.
+> - **In the one flight logged at 1 kHz** (step 7c, amendment A1, exploratory, written after the pre-registered estimator failed; 3 to 5 s of data), the motion of roll and pitch appeared coupled. The measured matrices predict the law run axis by axis 4 to 5 % (RMS) behind a joint estimate of roll, pitch and yaw, and the matrix form of the law (Syntony Principle V5.1, Theorem 35.1) within 0.2 % of it.
+>
+> The formula has no tuning parameter. It measures the accelerometer noise live and needs one fact measured once at rest, the gyro's angle random walk. Per axis, parity is what the theory predicts, since the steady-state Kalman filter is the Gaussian case of the syntonic window; across coupled axes the matrix law is the best symmetric window, and a joint Kalman filter can do better (bench note, section 12). The benches show that the prediction holds where the law plugs in, and that when the noise changes, a window that follows the measured noise beats one that does not.
+>
+> **What this is not, yet.**
+>
+> - The law has not run in the estimator of a real machine. The step 7 figures are predictions from matrices measured on logs, not errors of filters run against a truth.
+> - The comparison is with the Kalman core, not with PX4's EKF2 software, which also estimates heading, velocity and position (magnetometer, GPS, barometer). The law does not replace that part.
+> - The simulation is one axis with representative parameters. The engine's own identification failed there (step 6): the law needs the gyro's drift measured once at rest, and a drift fact overestimated by two fails (step 6b). With an uncalibrated gyro bias the law is slow to learn it at start, where the Kalman filter, which carries a bias state, is fast.
+> - The flight figures rest on 3 to 5 s of one unsteady flight (throttle 0.41 to 0.56) that ended in a crash; without its last second the roll-pitch coupling's interval crosses zero.
+>
+> The deciding test is the gimbal bench: the law and EKF2 fed the same IMU samples, an encoder on each axis as truth, rules written before the run. If parity fails there, the failure will be published here.
+>
+> Details: [Results on the attitude estimator](#results-on-the-attitude-estimator-of-a-quadrotor-simulation) and [Cross-axis coupling](#cross-axis-coupling-on-logged-data-of-the-x500-step-7) below, and the bench note, sections 10 to 12.
+
 ---
 
 ## What is claimed, and what is not
 
-On synthetic benches (`bench/software_2026-10-26/`) the engine stays within a few percent of the best fixed window and of Bayesian Kalman banks fitted with a change detector wherever the signal belongs to its class (a first-order window on a signal with a power-law structure function), tolerates increases of the sensor noise better than they do, and stays behind them where a second-order model applies (smooth targets, H >= 0.85: 25 %) or when the regime drifts fast. It does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
+On synthetic benches (`bench/software_2026-10-26/`) the engine stays within a few percent of the best fixed window and of Bayesian Kalman banks fitted with a change detector wherever the signal belongs to its class (a first-order window on a signal with a power-law structure function), tolerates increases of the sensor noise better than they do, and stays behind them where a second-order model applies (smooth targets, H >= 0.85: 25 %) or when the regime drifts fast. It does not notice when its class is the wrong one, because it computes its window instead of comparing candidates. In a simulated quadrotor attitude estimator the law, with the gyro's angle random walk entered as a fact measured at rest (step 6b), is at parity with a tuned Kalman filter under steady vibration and better than a fixed-noise one when the vibration rises; on logs of a real quadrotor on the ground, the measured matrices predict that a joint estimate of roll and pitch, as an EKF makes, would gain under 0.5 % in RMS over the law run axis by axis (step 7). The law has not yet run in the estimator of a real machine.
 
 The hypothesis under test is portability: the same law reaching the optimum of its class on machines of different physics, each described by a few facts measured once and nothing else. In its strict form, the same code with its own identification unchanged, it has already failed once, in software: on the attitude estimator of a quadrotor the engine's identification of the drift ran away, and the law reached the optimum only with the gyro's angle random walk entered as a fact measured once at rest (bench steps 6 and 6b, below). The substrates are a servo joint (ARM-1), a quadrotor on a gimbal, and, for the law rather than the code, a human in a tracking task. The pass criterion on each is the one of the software bench: window within a factor 1.5 of the swept optimum, regret under 10 %, exponent against U'. A failure on any of them is published as such and marks where the law stops. Nothing of this has run on hardware yet.
 
@@ -154,6 +175,25 @@ What this shows:
 - With the gyro's angle random walk measured once at rest and only the accelerometer noise measured live (step 6b), the window lands within 2 to 4 % of the best fixed one, follows the vibration with exponents 0.505 and 0.474 (0.5 predicted), stays within 4 % of the clairvoyant Kalman, and beats the fixed-noise Kalman by 26 % when the vibration rises x16 (ten seeds out of ten). With the drift fact overestimated by a factor 2 the window falls outside the pass band; underestimated by 2, it passes.
 - Limits: one simulated axis, no lever arm or frame resonance, gyro noise independent of throttle, H fixed at 1/2 by the sensor rather than measured, and a slow start when the gyro bias is not calibrated (the Kalman carries an explicit bias state). Nothing has run on hardware; the gimbal bench, with an encoder per axis as truth, is the next test.
 
+## Cross-axis coupling on logged data of the X500 (step 7)
+
+Steps 6 and 6b run the law one axis at a time. An EKF estimates all axes together with a full covariance, and the matrix form of the law (Syntony Principle V5.1, Theorem 35.1, with kappa = 1: T Q T = Sigma, T = Q^-1 # Sigma, the matrix geometric mean) is proven but not in this engine. Step 7 measures, on logged data of the X500 (Pixhawk 6X, gyroscope at 1 kHz), whether the axes are coupled enough to matter before building it. It runs no filter on the logs, which carry no truth: it measures the noise and drift matrices and predicts from them the steady-state error of each window. The figures below are RMS; the bench note also gives the mean-square values, in which the build rule was written (5 %). The logs are in `bench/software_2026-10-26/data/`, reduced to the columns the scripts use; `run_step7.py` reproduces every figure.
+
+| | Data | Law axis by axis, behind the joint Kalman (predicted RMS) | Matrix law, behind the joint Kalman |
+|---|---|---|---|
+| Attitude, roll and pitch (7a, pre-registered) | motor test on the ground, frame still, 55 s idle and 85 s low throttle | 0.29 and 0.41 % | 0.002 and 0.016 % |
+| Rate, roll, pitch and yaw (7c amendment A1, exploratory) | flight, 19 to 24 s | 5.2 % (2.0 to 8.9) | 0.16 % |
+| Same, shorter windows | flight, 19 to 23 s and 20 to 23 s | 3.7 and 3.9 % (1.5 to 5.8) | 0.17 and 0.22 % |
+
+In brackets, 90 % moving-block bootstrap intervals.
+
+What this shows:
+- The sensor noise is not coupled across axes: gyro white-noise correlations at most 0.09 in magnitude (bench, half throttle, flight), accelerometer-tilt noise 0.09, gyro drift on the still frame 0.16. On the attitude estimator the per-axis law is enough: under the build threshold set before the run (5 % in mean square; 0.6 and 0.8 % found).
+- In the one flight the motion appeared coupled: the rate changes of roll and pitch correlated +0.76 (0.38 to 0.91), pitch and yaw +0.41; without the last second the roll-pitch interval crosses zero. There, a joint estimate is predicted 4 to 5 % better in RMS (7.6 to 10.6 % in mean square, above the build threshold), and the matrix law would capture nearly all of it.
+- The TH44 collapse certificate on the three rate axes, the open diagnostic of the flight record, points to yaw alone over the full window (share 0.997, 0.98 to 1.00), not to a mixed direction: yaw goes first because its window is the slowest. The coupling raises the certificate by 7 to 9 % without turning its direction. In the shorter windows the share's interval reaches down to 0.80, so the reading is not secure there.
+- A point of theory: the matrix law's window is the best symmetric window (numerically, on 200 random pairs), and the joint Kalman window is not symmetric when the noise and drift matrices do not commute. On random matrices the mean-square gap has a median near 3 % and reaches 87 to 95 %; on this machine's matrices it is 0.004 to 0.4 %.
+- Limits: the figures are predictions from measured matrices, not errors of filters run on the logs. The pre-registered estimator of the rate's motion failed on all three logs (attributed to the narrowband rotor vibration), so the flight figures come from an amendment written afterwards. They rest on 3 to 5 s of one unsteady flight (throttle 0.41 to 0.56, 10 to 20 A) that ended in a crash, and the per-axis rate windows they imply are about 2 ms on roll and pitch, two gyro samples, where the continuous-time comparison is at its edge. On the attitude side: low throttle, and windows of 16 to 52 s extrapolated beyond the scales measured (up to 1 s). There are no magnetometer values in the log, so yaw attitude is not covered. A steady flight of a minute or more logged at 1 kHz, with an estimator for narrowband vibration written before the data, settles it; if the coupling holds, a three-axis bench of the matrix law follows.
+
 ## Checks
 
 - The Python engine in `python/syntonic_engine` with `identification='raw'` reproduces the bench engine exactly: zero difference in joint angles and windows over 33 s on 12 joints; a unit test pins it to the 0.1.1 numbers.
@@ -184,8 +224,8 @@ rust/                     the engine as a no_std Rust crate, with a replay check
 examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
 bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
                           simulation model, which is not included, but all results are), and the software bench
-                          of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6b
-                          (software_2026-10-26/, self-contained)
+                          of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6b and
+                          step 7 on logged X500 data (software_2026-10-26/, self-contained, logs in data/)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 

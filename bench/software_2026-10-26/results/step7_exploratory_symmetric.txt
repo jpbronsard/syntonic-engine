@@ -1,0 +1,4 @@
+balance residual T Q T^T = Sigma: T_K max 1.0e-13, T_sym max 8.6e-15
+sym/K - 1: median 2.642e-02 max 9.487e-01
+best symmetric/K - 1: median 2.642e-02 max 9.487e-01
+T_sym vs best symmetric: (sym - bestsym)/K, median 6.661e-16 max 2.442e-15

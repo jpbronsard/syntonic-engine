@@ -1,0 +1,21 @@
+step7c_rate3_th44.py sha256 d1f43d53575abf82aeb22fbb7f7e39a887d3a82d2382931c205fa125fd4832e0
+
+== W1 bench: 84.6 s of 1 kHz gyro, 3 run(s), record gaps > 5.5 ms: 4; n second differences at 128 ms: 653; engine tau medians R/P/Y = [73.0, 57.9, 75.6] ms; throttle median 0.104, current 0.94 A
+  Sn diag (rad^2/s): [2.125e-07 1.218e-07 5.068e-08]  corr(Sn) = [[ 1.    -0.066  0.078] [-0.066  1.    -0.069] [ 0.078 -0.069  1.   ]]
+  Lam diag (rad^2/s^3) per scale: {32: [-0.000859, -0.000346, 0.000269], 64: [-0.000193, 3.9e-05, -3.9e-05], 128: [-6.5e-05, -3.7e-05, -1.2e-05]}
+  Lam diag: [-3.7244e-04 -1.1503e-04  7.2651e-05]  positive definite: False
+  Lam not positive definite: D2r and D4 not computed
+
+== W2 thrust: 8.0 s of 1 kHz gyro, 1 run(s), record gaps > 5.5 ms: 0; n second differences at 128 ms: 60; engine tau medians R/P/Y = [30.9, 44.0, 60.6] ms; throttle median 0.436, current 9.78 A
+  Sn diag (rad^2/s): [6.967e-06 5.608e-06 2.216e-06]  corr(Sn) = [[ 1.    -0.09  -0.042] [-0.09   1.     0.008] [-0.042  0.008  1.   ]]
+  Lam diag (rad^2/s^3) per scale: {32: [-0.047284, -0.009396, 0.004562], 64: [-0.012337, 0.021261, -0.000278], 128: [-0.003285, -0.001028, 0.000905]}
+  Lam diag: [-0.021   0.0036  0.0017]  positive definite: False
+  Lam not positive definite: D2r and D4 not computed
+
+== W3 flight: 5.0 s of 1 kHz gyro, 1 run(s), record gaps > 5.5 ms: 0; n second differences at 128 ms: 36; engine tau medians R/P/Y = [41.7, 35.6, 63.2] ms; throttle median 0.452, current 12.66 A
+  Sn diag (rad^2/s): [2.620e-05 2.005e-05 7.517e-06]  corr(Sn) = [[ 1.    -0.006  0.019] [-0.006  1.    -0.039] [ 0.019 -0.039  1.   ]]
+  Lam diag (rad^2/s^3) per scale: {32: [0.260193, 0.252359, -0.030656], 64: [2.345487, 1.672716, 0.003263], 128: [6.950313, 5.667552, 0.036019]}
+  Lam diag: [3.1853e+00 2.5309e+00 2.8755e-03]  positive definite: False
+  Lam not positive definite: D2r and D4 not computed
+
+== Decisions
