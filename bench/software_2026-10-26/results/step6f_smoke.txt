@@ -1,0 +1,14 @@
+step6f smoke run (toy size; not a result).
+step6f_uprime_local.py sha256 795a5b371fa4d5f2660c0744ead469876dfd7611afa28fd2cf7bf2eb05b00da9
+evaluate_step6f.py sha256 2d038cbb1583385a48f3253202f64825c747b582652c0602e36c7f836cdcf3c0
+stages run: calibrate, pilot, evaluate, judge; all exited 0; the judge output was discarded unread.
+FFT structure function against direct sums (lags 1, 10, 1000 and L/2 samples, 240 s records): max relative difference 2.9e-05
+identity of the decomposition with step 6's Mahony (truth included, 20 s, three windows), per arm:
+  C50: identity check 5.3e-16 rad
+  C90: identity check 7.9e-16 rad
+  X9: identity check 1.0e-15 rad
+  X10: identity check 6.3e-16 rad
+  J: identity check 4.6e-16 rad
+  S50: identity check 1.3e-15 rad
+  S90: identity check 7.7e-16 rad
+No window, exponent, prediction value or verdict is recorded here.
