@@ -1,0 +1,48 @@
+evaluate_step6c.py sha256 905b80fdb3f04ba8128518156d3eebf19d637f0ea1e931414ec037aab522fdec
+step6c script sha256 d7c8b23be57ab49129afb7a96f0bd20547f144d47ba7bcbfa3b2a25aad471257 | step6 script sha256 035647c9e7770ea8873d0ccd536af867ea9078362170112fb256d948dd6154ed | step6b script sha256 aa082341cdb9d60678152da16a568929cef2557fa46ec9af356aecd3ae3ebc6b
+
+H6c.1 identity, B: max |RMS(POW-0.5) - RMS(SYN-6B)| = 3.96e-16 deg -> OK
+
+== B_throttle, V [1.0, 16.0, 0.0625], sqrt(S0/Q_G) [1.077, 4.02, 0.473] s; RMS in millidegrees (mean over seeds), windows in s (seed medians)
+  oracle (best fixed per segment): [10.8, 20.6, 7.1]  windows [1.142, 3.721, 0.536]
+  BEST-FIX (one window for the stream, hindsight): 2.018 s -> [11.9, 22.9, 10.3]  J 7.7848e-04
+  POW-0.0  : [10.9, 28.7, 8.0]  windows [1.081, 1.081, 1.081]  J 1.0106e-03  J / J(POW-0.5) 1.546
+  POW-0.25 : [11.0, 23.5, 7.2]  windows [0.98, 1.876, 0.66]  J 7.3165e-04  J / J(POW-0.5) 1.119
+  POW-0.375: [11.1, 22.0, 7.1]  windows [0.925, 2.492, 0.516]  J 6.6648e-04  J / J(POW-0.5) 1.019
+  POW-0.5  : [11.2, 21.5, 7.3]  windows [0.872, 3.321, 0.403]  J 6.5374e-04  J / J(POW-0.5) 1.000
+  POW-0.625: [11.4, 22.5, 7.8]  windows [0.826, 4.443, 0.316]  J 7.1493e-04  J / J(POW-0.5) 1.094
+  POW-0.75 : [11.5, 25.5, 8.5]  windows [0.781, 5.928, 0.247]  J 8.9053e-04  J / J(POW-0.5) 1.362
+  POW-1.0  : [12.0, 38.3, 10.9]  windows [0.707, 10.434, 0.152]  J 1.8891e-03  J / J(POW-0.5) 2.890
+  KF-OPT [12.1, 22.2, 10.6]  KF-FIX [10.9, 29.0, 7.9]  KF-CLAIR [10.9, 21.4, 7.0]
+  transients, mean RMS: POW-0.5 [14.6, 23.7, 8.4]  POW-0 [14.9, 31.5, 8.7]
+
+== W_wide, V [1.0, 256.0, 0.0625], sqrt(S0/Q_G) [1.077, 16.005, 0.473] s; RMS in millidegrees (mean over seeds), windows in s (seed medians)
+  oracle (best fixed per segment): [10.4, 49.2, 7.0]  windows [1.054, 8.049, 0.504]
+  BEST-FIX (one window for the stream, hindsight): 5.503 s -> [21.6, 55.3, 21.4]  J 4.0525e-03
+  POW-0.0  : [10.4, 114.1, 8.1]  windows [1.081, 1.081, 1.081]  J 1.3237e-02  J / J(POW-0.5) 3.796
+  POW-0.25 : [10.5, 63.9, 7.2]  windows [0.983, 3.754, 0.657]  J 4.2869e-03  J / J(POW-0.5) 1.229
+  POW-0.375: [10.5, 52.0, 7.1]  windows [0.937, 7.087, 0.513]  J 2.9053e-03  J / J(POW-0.5) 0.833
+  POW-0.5  : [10.6, 54.9, 7.2]  windows [0.891, 13.268, 0.4]  J 3.4870e-03  J / J(POW-0.5) 1.000
+  POW-0.625: [10.7, 85.4, 7.7]  windows [0.848, 24.669, 0.317]  J 9.2131e-03  J / J(POW-0.5) 2.642
+  POW-0.75 : [10.8, 103.3, 10.4]  windows [0.808, 30.0, 0.255]  J 1.3608e-02  J / J(POW-0.5) 3.903
+  POW-1.0  : [11.2, 115.6, 12.3]  windows [0.734, 30.0, 0.161]  J 1.7461e-02  J / J(POW-0.5) 5.008
+  KF-OPT [22.7, 53.3, 22.1]  KF-FIX [10.4, 116.0, 8.0]  KF-CLAIR [10.4, 52.1, 7.0]
+  transients, mean RMS: POW-0.5 [13.4, 57.5, 27.2]  POW-0 [13.6, 114.8, 14.8]
+
+== Hypotheses
+H6c.2 B_throttle: J(POW-0.5) 6.5374e-04 vs J(BEST-FIX) 7.7848e-04 (ratio 0.840) and J(POW-0) 1.0106e-03 (ratio 0.647)
+H6c.2 W_wide: J(POW-0.5) 3.4870e-03 vs J(BEST-FIX) 4.0525e-03 (ratio 0.860) and J(POW-0) 1.3237e-02 (ratio 0.263)
+H6c.3 W: J over p {0.0: 3.796, 0.25: 1.229, 0.375: 0.833, 0.5: 1.0, 0.625: 2.642, 0.75: 3.903, 1.0: 5.008} (relative to p = 0.5); grid minimum p = 0.375, p* = 0.400 (in [0.4, 0.6]); J(0.25)/J(0.5) = 1.229, J(0.75)/J(0.5) = 3.903 (>= 1.05)
+   reported, B: J over p relative to p = 0.5 {0.0: 1.546, 0.25: 1.119, 0.375: 1.019, 0.5: 1.0, 0.625: 1.094, 0.75: 1.362, 1.0: 2.89}
+   reported, W: oracle exponent d log tau_oracle / d log S0, seg 1 vs 0 0.387, seg 2 vs 0 0.455; POW-0.5 the same 0.501, 0.482
+H6c.4 W seg 0: tau/oracle 0.838, regret 1.5 % -> pass
+H6c.4 W seg 1: tau/oracle 1.649, regret 10.2 % -> FAIL
+H6c.4 W seg 2: tau/oracle 0.808, regret 3.4 % -> pass
+H6c.5 W: POW-0.5 / KF-CLAIR [1.018, 1.054, 1.041] (<= 1.10); POW-0.5 / KF-FIX [1.018, 0.474, 0.909] (< 1 in seg 1, 2); reported POW-0.5 / KF-OPT [0.466, 1.031, 0.328]
+
+== Verdict
+H6c.1: HOLDS
+H6c.2: HOLDS
+H6c.3: HOLDS
+H6c.4: FAILS
+H6c.5: HOLDS

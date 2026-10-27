@@ -1,0 +1,13 @@
+step6c_ablation.py  sha256 d7c8b23be57ab49129afb7a96f0bd20547f144d47ba7bcbfa3b2a25aad471257
+Allan at rest: lambda_hat / Q_G per seed [1.014, 0.972, 0.957, 1.016, 0.969, 0.955, 0.98, 1.021, 1.008, 1.014]
+  B_throttle t = 90 s  (6 s)
+  B_throttle t = 180 s  (11 s)
+  B_throttle t = 270 s  (17 s)
+B_throttle: runtime 23 s
+  W_wide t = 90 s  (16 s)
+  W_wide t = 180 s  (33 s)
+  W_wide t = 270 s  (50 s)
+  W_wide t = 360 s  (67 s)
+  W_wide t = 450 s  (84 s)
+W_wide: runtime 101 s; oracle window per segment (seed median) [1.054, 8.049, 0.504] vs sqrt(S0/Q_G) [1.077, 16.005, 0.473]
+written /home/claude/syntonic-engine/bench/software_2026-10-26/results/step6c_rows.json
