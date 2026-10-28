@@ -1,0 +1,15 @@
+step6f pilot  script sha256 795a5b371fa4d5f2660c0744ead469876dfd7611afa28fd2cf7bf2eb05b00da9  judge sha256 2d038cbb1583385a48f3253202f64825c747b582652c0602e36c7f836cdcf3c0
+predictions sha256 fba86d38688bf86562000d97e00b4cb07e10ce3764d6c94964c43c7ebb246a2b  pilot seeds 2900..2999  runtime 147 s
+Only standard errors, edge flags and checks are printed; no window, exponent, difference or verdict.
+  C50: identity check 5.3e-16 rad; any population optimum at a grid edge: False
+  C90: identity check 7.9e-16 rad; any population optimum at a grid edge: False
+  X9: identity check 1.0e-15 rad; any population optimum at a grid edge: False
+  X10: identity check 6.3e-16 rad; any population optimum at a grid edge: False
+  J: identity check 4.6e-16 rad; any population optimum at a grid edge: False
+  S50: identity check 1.3e-15 rad; any population optimum at a grid edge: False
+  S90: identity check 7.7e-16 rad; any population optimum at a grid edge: False
+  X9: predicted gap 0.0298 (from the frozen predictions); SE at 100 pilot seeds: evaluation 0.0018, calibration 0.0002; seeds required 3
+  X10: predicted gap 0.0397 (from the frozen predictions); SE at 100 pilot seeds: evaluation 0.0033, calibration 0.0025; seeds required 7
+  S50: predicted gap 0.0278 (from the frozen predictions); SE at 100 pilot seeds: evaluation 0.0025, calibration 0.0005; seeds required 7
+N_EVAL = 200  (rule: the largest requirement, rounded up to a multiple of 100, within [200, 2000])
+non-discriminant, reported and not judged: none
