@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Theorem U'-Local is deposited (concept DOI 10.5281/zenodo.23734084, version 1.0 10.5281/zenodo.23734086). The README and the bench note (version 1.7, section 16) cite it; CITATION.cff lists it among the references. The pre-registered step-6f script keeps its docstring ("deposit pending") unchanged, since its hash is part of the record.
 - README, announcement: the two step-7 bullets say first that they are computed from logs, with no filter run, and state the axis-by-axis figures in the conditional; the figures are unchanged.
 
 ## 0.2.5 (28 Oct 2026)

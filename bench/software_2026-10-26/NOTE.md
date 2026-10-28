@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.6. 26 to 28 October 2026. SyntonicAI Recherche.
+Bench note, version 1.7. 26 to 28 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -22,6 +22,7 @@ Version 1.6 (27 and 28 Oct) adds sections 15 and 16. Step 6e: the exponent of U'
 performance hypothesis fails at H = 0.75. Step 6f: Theorem U'-Local against the square root and against U' read with a
 raw local index, predictions frozen from a calibration before the evaluation, noise levels that keep the noise's shape;
 seven of seven hypotheses hold, the validity check included.
+Version 1.7 (28 Oct): the note Theorem U'-Local is deposited (DOI 10.5281/zenodo.23734084); section 16 cites it. No result changes.
 
 ## 1. Purpose and verdict
 
@@ -621,7 +622,7 @@ c718284); pilot and results were pushed at 00:39 UTC. Push times are those of th
 are listed in that commit. The smoke run, at toy size, recorded only the identity check and the FFT check
 (`results/step6f_smoke.txt`).
 
-Origin. The note Theorem U'-Local (version 1.0, deposit pending) gives the exact local exponent of the optimal window,
+Origin. The note Theorem U'-Local (version 1.0, DOI 10.5281/zenodo.23734084) gives the exact local exponent of the optimal window,
 alpha_loc = 1 / (s[A'] - s[-beta']) at the optimum, for every separable loss whose balance A' / (-beta') increases from 0
 to infinity, and, for the exponential window under white noise, the optimum as the root of tau E[(E - 1) D(tau E)] =
 sigma^2, with D the drift's structure function and E a standard exponential. Design of the bench by J.-P. Bronsard:

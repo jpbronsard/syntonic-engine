@@ -49,3 +49,10 @@ references:
     title: "The Syntony Principle"
     doi: "10.5281/zenodo.17254395"
     year: 2026
+  - type: article
+    authors:
+      - family-names: "Bronsard"
+        given-names: "Jean-Pierre"
+    title: "Theorem U′-Local: The Local Exponent Law of the Syntonic Window"
+    doi: "10.5281/zenodo.23734084"
+    year: 2026
