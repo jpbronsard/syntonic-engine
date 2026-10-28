@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- README, announcement: the two step-7 bullets say first that they are computed from logs, with no filter run, and state the axis-by-axis figures in the conditional; the figures are unchanged.
+
 ## 0.2.5 (28 Oct 2026)
 
 Bench and documentation only; the code is that of 0.2.0.
