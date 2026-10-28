@@ -589,8 +589,11 @@ but its rotor line has an amplitude proportional to sqrt(V) and a frequency of 9
 filters all of it, so the line's share and its attenuation change with V. Computed from the exact error of the
 discrete filter, that noise predicts downward exponents of 0.471, 0.430, 0.380 and 0.341, against 0.500, 0.454, 0.400
 and 0.357 for a white noise of intensity S0(V); the upward ones barely move (0.499 to 0.356). The change of shape thus
-accounts for about 60 % of the downward offset at H = 0.5 to 0.75 (0.029 of 0.046, 0.024 of 0.041, 0.020 of 0.033); at
-H = 0.9 the offset (0.017) lies within its interval. Step 6f tested the shape effect itself at constant V (section 16,
+accounts for about 60 % of the downward offset at H = 0.5 to 0.75 in point estimate (0.029 of 0.046, 0.024 of 0.041,
+0.020 of 0.033); at H = 0.9 the offset (0.017) lies within its interval. With the shape accounted for, every downward
+exponent lies within its 95 % interval (0.471 in [0.436, 0.474], 0.430 in [0.396, 0.432], 0.380 in [0.347, 0.389],
+0.341 in [0.309, 0.374]), while the white-noise prediction is excluded at H = 0.5 to 0.75: the rest of the offset is
+not resolved by this run. Step 6f tested the shape effect itself at constant V (section 16,
 H6f.5, S50 judged and S90 reported); it measured 0.470 at H = 0.5 there, not step 6e's 0.454, so it does not test
 the split of step 6e's offset.
 
@@ -601,7 +604,8 @@ The generator draws the drift from the law U' assumes, so the exponent is fixed 
 implemented chain (oracle, laws, identification at rest), not the physics. The confirmatory test of this exponent class
 remains the U' bench's pre-registered three-decade fit (DOI 10.5281/zenodo.21473974); step 6e is an in-class check of
 the code. Limits: as in step 6d (one axis, fractional Brownian drift as a stand-in for real gyro noise, no bias
-channel); the upward offset (each inside its own interval) and the rest of the downward one are not explained. Step 6f
+channel); the upward offset (each inside its own interval) and the rest of the downward one (also inside the
+intervals) are not explained. Step 6f
 shows neither (section 16), but it differs from step 6e in several ways (constant V over 600 s against V switched
 inside 180 s runs with 60 s skipped, the window grid, the seeds); none of these candidates is tested.
 
@@ -667,8 +671,9 @@ Brackets: 95 % joint bootstrap intervals (evaluation and calibration seeds).
 - H6f.1 holds (the note's P1): all 37 secants within three standard errors of U'-Local. Measured exponents run from
   0.439 to 0.354 in X9 (U'-Local 0.438 to 0.365) and from 0.432 to 0.334 in X10 (0.429 to 0.338). The largest deviation,
   0.011, is X9's last secant (2.0 SE).
-- H6f.2 holds (the main comparison; the note's P2): U'-Local beats U' read with the raw local index in X9 and X10. The
-  raw reading overestimates the exponent at every secant, by 0.019 to 0.038 in X9 and 0.016 to 0.053 in X10.
+- H6f.2 holds (the main comparison; the slope-of-D part of the note's P2): U'-Local beats U' read with the raw local
+  index in X9 and X10. Reported: the raw reading overestimates the exponent at every secant of these two arms, by 0.019
+  to 0.038 in X9 and 0.015 to 0.053 in X10.
 - H6f.3 holds: the square root is excluded in C90, X9 and X10, the arms whose drift is not Brownian (0.11 to 0.14).
 - H6f.4 holds: U'-Local's window is within 0.977 to 1.009 of the optimum at every level, regret at most 0.04 %; it runs
   1 to 2 % short in C90 and X10.
