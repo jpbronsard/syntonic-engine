@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.5. 26 and 27 October 2026. SyntonicAI Recherche.
+Bench note, version 1.6. 26 to 28 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -17,6 +17,11 @@ of its band; the predicted window fails at x256.
 Version 1.5 (27 Oct) adds section 14, step 6d: the mechanism of the step-6c failure, and whether the generalized law
 U' predicts a change of exponent. Five of seven hypotheses hold (identity check included); the two mechanism hypotheses
 fail, and the exponent test passes without the power to tell U' from the square root.
+Version 1.6 (27 and 28 Oct) adds sections 15 and 16. Step 6e: the exponent of U' with power (100 paired seeds, H from
+0.5 to 0.9); four of five hypotheses hold: the exponent from nominal to x256 follows 1/(2H+1) across H, and the
+performance hypothesis fails at H = 0.75. Step 6f: Theorem U'-Local against the square root and against U' read with a
+raw local index, predictions frozen from a calibration before the evaluation, noise levels that keep the noise's shape;
+seven of seven hypotheses hold, the validity check included.
 
 ## 1. Purpose and verdict
 
@@ -530,3 +535,168 @@ generator family (not an independent test); fractional Brownian drift is a stand
 (angle random walk, bias instability, rate random walk), and H is identified on the same pure power law, biased low on
 average; arm U has no bias channel, so it says nothing direct about the 6c setting; M1 gives the filter the true bias,
 a diagnostic, not a filter one can build; the offset of the oracle exponents is unexplained.
+
+## 15. Step 6e (27 Oct 2026): the exponent of U', with power
+
+`step6e_uprime_powered.py` (SHA-256 d1f84d61) and its judge `evaluate_step6e.py` (75b01afb), pre-registered; committed at
+20:00 UTC and pushed to GitHub at 21:05 UTC on 27 Oct (commit a5acac5), before the full run (507 s; results committed
+at 21:15 UTC). The smoke run (U90, four seeds) printed only the fractional-noise variance check, H measured at rest and
+whether each population optimum lay inside its grid; `results/step6e_smoke.json` keeps H and lambda_H at rest and the
+runtime. No hypothesis was amended. Results in `results/step6e_results.txt`, rows in `results/step6e_rows.json`, run
+log in `results/step6e_run.log`. The results were committed at 21:15 UTC (a8388cc) and first pushed with release 0.2.5,
+as 649c47d, after the commits of step 6f; the step-6f header, pushed at 00:07 UTC on 28 Oct, quotes them. Readings
+after the verdict, not pre-registered: `step6e_exploratory.py` (6662ac27), output `results/step6e_exploratory.txt`,
+written on 27 Oct and first committed in 0.2.5; its reading (c) is the one quoted in the step-6f header.
+
+The question. Step 6d's arm U met its criteria without the power to tell U''s exponent from 1/2 (ten seeds, per-seed
+exponents spread 0.14). Step 6e is the powered version, on the same generator and filter (Mahony without bias integral,
+a first-order window; the gyro's drift fractional Brownian motion of index H, no angle random walk, no bias; lambda_H set
+so that U''s window at nominal vibration is 1.077 s): 100 seeds (1000..1099), the same seeds for every H (paired), H =
+0.5, 0.6, 0.75, 0.9 (arms U50 to U90, predicted exponents 0.500, 0.455, 0.400, 0.357), scenario W (V = 1, 256, 1/16;
+180 s segments, steady part the last 120 s). The optimum is the population optimum: for each arm and segment, the
+mean-square error of each fixed window averaged over the 100 seeds (36 windows, 0.05 to 100 s), minimised by a parabola
+in log tau; uncertainty by a bootstrap over seeds that keeps the pairing (one seed draw for every arm) and re-estimates
+every optimum on every draw. Laws: POW-U and POW-S, U''s exponent and the square root, both calibrated at the true
+nominal window; ULAW, U' with H and lambda_H measured once at rest (300 s, block means at 0.128 to 8.192 s) and the noise
+measured live; ULAW-K, U' with the true inputs.
+
+Verdict: four of five hypotheses hold; H6e.4 fails at H = 0.75.
+
+| Arm | Predicted | Exponent 1 -> 256 (95 %) | Exponent 1 -> 1/16 (95 %) | J(POW-U) / J(POW-S) at 256 (95 %) | ULAW: regret max, window / optimum |
+|---|---|---|---|---|---|
+| U50 | 0.500 | 0.509 [0.493, 0.527] | 0.454 [0.436, 0.474] | 1.000 | 2.4 %, 0.79 to 0.83 |
+| U60 | 0.455 | 0.465 [0.451, 0.480] | 0.414 [0.396, 0.432] | 1.028 [1.009, 1.049] | 2.3 %, 0.81 to 0.84 |
+| U75 | 0.400 | 0.413 [0.399, 0.427] | 0.367 [0.347, 0.389] | 0.969 [0.920, 1.023] | 2.8 %, 0.83 to 0.88 |
+| U90 | 0.357 | 0.369 [0.355, 0.383] | 0.340 [0.309, 0.374] | 0.797 [0.721, 0.893] | 4.1 %, 0.91 to 0.94 |
+
+- H6e.1 holds: the least-squares slope of the four upward exponents on 1/(2H+1) is 0.976 [0.888, 1.072] (band [0.7, 1.3];
+  the square root predicts 0).
+- H6e.2 holds: each upward exponent is within 0.013 of 1/(2H+1) (tolerance 0.05).
+- H6e.3 holds: at H = 0.75 and 0.9 the 95 % intervals of the upward exponent exclude 0.5.
+- H6e.4 fails at H = 0.75: at x256, U''s exponent has 3.1 % less mean-square error than the square root, interval
+  [0.920, 1.023] crossing 1; it holds at H = 0.9 (20 % less, [0.721, 0.893]). Reported: at H = 0.6 the square root does
+  slightly better there (1.028 [1.009, 1.049]; regrets 0.1 % against 1.5 %).
+- H6e.5 holds: ULAW's regret is at most 4.1 % and its window 0.79 to 0.94 of the optimum in every segment of every arm,
+  with H measured at rest at 0.500, 0.600, 0.746 and 0.881 on average (true 0.5 to 0.9).
+- Reported: the downward exponents lie below 1/(2H+1) (0.454, 0.414, 0.367, 0.340; slope 0.806 [0.580, 0.998]), and the
+  upward ones 0.009 to 0.013 above it.
+
+Readings after the verdict (exploratory). (a) The judged interval keeps the pairing; with independent seed draws per arm
+the slope's interval would be [0.838, 1.118]. (b) The population optimum is 0.98 of U''s window at V = 1 in every arm,
+1.03 to 1.05 at x256 and 1.01 to 1.06 at x1/16: a level offset of a few percent that moves the upward exponents by
+about 0.01. (c) Step 6e's accelerometer noise does not keep its shape across V: its white vibration scales with V,
+but its rotor line has an amplitude proportional to sqrt(V) and a frequency of 92 V^(1/4) Hz, and the 80 Hz Butterworth
+filters all of it, so the line's share and its attenuation change with V. Computed from the exact error of the
+discrete filter, that noise predicts downward exponents of 0.471, 0.430, 0.380 and 0.341, against 0.500, 0.454, 0.400
+and 0.357 for a white noise of intensity S0(V); the upward ones barely move (0.499 to 0.356). The change of shape thus
+accounts for about 60 % of the downward offset at H = 0.5 to 0.75 (0.029 of 0.046, 0.024 of 0.041, 0.020 of 0.033); at
+H = 0.9 the offset (0.017) lies within its interval. Step 6f tested the shape effect itself at constant V (section 16,
+H6f.5, S50 judged and S90 reported); it measured 0.470 at H = 0.5 there, not step 6e's 0.454, so it does not test
+the split of step 6e's offset.
+
+What it means. Inside U''s class, with 100 paired seeds, the optimal exponent follows 1/(2H+1) across H (slope 0.98),
+the square root is excluded at H = 0.75 and 0.9, and U' with H and lambda_H measured once at rest stays within 4.1 % of
+the optimum. The exponent matters for the error only at H = 0.9 (20 % at x256); at H = 0.75 the gain is not resolved.
+The generator draws the drift from the law U' assumes, so the exponent is fixed by scaling: the bench checks the
+implemented chain (oracle, laws, identification at rest), not the physics. The confirmatory test of this exponent class
+remains the U' bench's pre-registered three-decade fit (DOI 10.5281/zenodo.21473974); step 6e is an in-class check of
+the code. Limits: as in step 6d (one axis, fractional Brownian drift as a stand-in for real gyro noise, no bias
+channel); the upward offset (each inside its own interval) and the rest of the downward one are not explained. Step 6f
+shows neither (section 16), but it differs from step 6e in several ways (constant V over 600 s against V switched
+inside 180 s runs with 60 s skipped, the window grid, the seeds); none of these candidates is tested.
+
+## 16. Step 6f (27 and 28 Oct 2026): Theorem U'-Local against the square root and a raw local index
+
+`step6f_uprime_local.py` (SHA-256 795a5b37) and its judge `evaluate_step6f.py` (2d038cbb), pre-registered; the rules (the
+script's header) were committed at 23:04 UTC on 27 Oct (commit a115b2c) and pushed at 00:07 UTC on 28 Oct, immediately
+before stage 1 started (the calibration took 1010 s and was committed at 00:24:46). Stage 1 froze the predictions from
+the calibration; they were committed at 00:24 and pushed at 00:26 UTC (1664f22), before the pilot started (147 s,
+committed at 00:29:31, 56bcc94). The pilot printed only standard errors, the predicted gaps from the frozen
+predictions, grid-edge flags, the identity check, its runtime and the number of seeds. The results followed (00:35,
+c718284); pilot and results were pushed at 00:39 UTC. Push times are those of the repository's remote-tracking log. The code was reviewed independently before the rules were committed; the fixes
+are listed in that commit. The smoke run, at toy size, recorded only the identity check and the FFT check
+(`results/step6f_smoke.txt`).
+
+Origin. The note Theorem U'-Local (version 1.0, deposit pending) gives the exact local exponent of the optimal window,
+alpha_loc = 1 / (s[A'] - s[-beta']) at the optimum, for every separable loss whose balance A' / (-beta') increases from 0
+to infinity, and, for the exponential window under white noise, the optimum as the root of tau E[(E - 1) D(tau E)] =
+sigma^2, with D the drift's structure function and E a standard exponential. Design of the bench by J.-P. Bronsard:
+three predictors frozen before any result; the local law computing its slopes from calibration statistics, without
+seeing the evaluation's optimal windows; the prediction error of the exponent on held-out data as the main test, the
+optimal window and its regret as the second; and changes of the noise level that keep the noise's spectral shape, so
+that the measured exponent is the derivative the theorem defines.
+
+Setting. One axis, the estimator of steps 6d and 6e inside the note's class: Mahony without bias integral, a first-order
+window on the accelerometer, the drift in the gyro, the noise in the accelerometer. The filter is linear and the
+attitude truth cancels, so the error at noise level c is e_d + sqrt(c) e_n and the steady mean-square error per seed is
+A + c B + 2 sqrt(c) X, exactly (identity with step 6's Mahony: 8.3e-16 rad). Every level of an arm comes from one drift
+path and one unit noise path per seed; in five arms the noise is white and the same unit path is scaled at every level,
+so its shape is identical across levels by construction. Paths of 600 s at 1 kHz, 40 windows from 0.03 to 30 s.
+
+| Arm | Drift structure function (Q = step 6's angle random walk) | Noise | Role |
+|---|---|---|---|
+| C50 | Q s | white, scaled | control |
+| C90 | Q s^1.8 | white, scaled | control |
+| X9 | Q (s + s^1.8), crossover at 1 s | white, scaled | discriminant |
+| X10 | Q s + Q s^2 (angle random walk and a constant random bias of standard deviation 0.01 deg/s), crossover at 1 s | white, scaled | discriminant |
+| J | Q s + (100 Q / 3)(1 - cos 3s) (the note's Remark 6: the balance is not monotone) | white, scaled | the jump |
+| S50, S90 | step 6e's drifts (H = 0.5 and 0.9) | step 6e's noise at constant V = 1, 256, 1/16 | the shape control |
+
+Predictors, all fed the same structure function measured at rest (400 records of 1200 s, seeds 3000..3399) and the same
+noise level (known), and nothing from the evaluation. LOCAL: U'-Local, Theorem 1 applied to the discrete filter (the
+tracking error from the measured D by the exact discrete form of the Laplace representation), its predicted curve read
+on the evaluation's window grid as the measured one is. RAWS: U' with the raw local index, exponent 1 / (2 H_D + 1) with
+H_D half the log-slope of D at the scale of the window. SQRT: the square root. Reported only: RAWF (U' applied level by
+level with a power law fitted to D at the window itself), ENGINE (the engine's U' law, one block-mean fit of H at rest),
+LOCAL-C (the continuous law by quadrature) and, in the shape arms, AWARE (the noise-only error curve measured on
+calibration noise at each V) beside the shape-blind LOCAL. The pilot's rule fixed N = 200 evaluation seeds (4000..4199):
+every predicted gap exceeded three standard errors at the floor of the rule.
+
+Verdict: seven of seven hypotheses hold, the validity check H6f.0 included.
+
+| Arm | Secants | Largest |e - LOCAL| (largest in SE) | RMS(e - RAWS) - RMS(e - LOCAL) | RMS(e - 1/2) - RMS(e - LOCAL) | LOCAL window / optimum; regret max |
+|---|---|---|---|---|---|
+| C50 | 7 | 0.004 (2.2) | | | 0.999 to 1.009; 0.00 % |
+| C90 | 10 | 0.005 (1.7) | | 0.139 [0.133, 0.141] | 0.978 to 0.992; 0.03 % |
+| X9 | 10 | 0.011 (2.0) | 0.026 [0.021, 0.028] | 0.108 [0.103, 0.109] | 0.988 to 1.004; 0.01 % |
+| X10 | 10 | 0.004 (1.2) | 0.036 [0.025, 0.039] | 0.130 [0.122, 0.132] | 0.977 to 0.993; 0.04 % |
+
+Brackets: 95 % joint bootstrap intervals (evaluation and calibration seeds).
+
+- H6f.0 holds: the identity with step 6's Mahony to 8.3e-16 rad; no population optimum at a grid edge.
+- H6f.1 holds (the note's P1): all 37 secants within three standard errors of U'-Local. Measured exponents run from
+  0.439 to 0.354 in X9 (U'-Local 0.438 to 0.365) and from 0.432 to 0.334 in X10 (0.429 to 0.338). The largest deviation,
+  0.011, is X9's last secant (2.0 SE).
+- H6f.2 holds (the main comparison; the note's P2): U'-Local beats U' read with the raw local index in X9 and X10. The
+  raw reading overestimates the exponent at every secant, by 0.019 to 0.038 in X9 and 0.016 to 0.053 in X10.
+- H6f.3 holds: the square root is excluded in C90, X9 and X10, the arms whose drift is not Brownian (0.11 to 0.14).
+- H6f.4 holds: U'-Local's window is within 0.977 to 1.009 of the optimum at every level, regret at most 0.04 %; it runs
+  1 to 2 % short in C90 and X10.
+- H6f.5 holds (the shape control): with step 6e's noise, S50's downward exponent is 0.4703, against 0.4715 for the
+  shape-aware prediction and 0.4994 for the shape-blind one (15 SE away). Reported: S90, 0.3386 against 0.3412 and
+  0.3567; the upward exponents, 0.497 and 0.352, are within 0.003 of the shape-aware ones.
+- H6f.6 holds (the jump, Remark 6): the optimal window jumps from 0.462 to 1.953 s between 0.98 and 1.02 times the
+  predicted level (ratio 4.23; U'-Local predicts 4.25 on its fine grid and 4.19 read on the evaluation grid; the ratio
+  itself was not judged and carries no interval), every other adjacent ratio is at most 1.20, and every window lies within
+  0.992 to 1.022 of U'-Local's minimiser on its branch. RAWF and SQRT predict no jump (largest ratios 1.085 and 1.118);
+  above it their regret reaches 17 % and 8.5 %.
+- Reported, not judged: RAWF departs from the measured exponents by up to 0.009 (X9) and 0.013 (X10). Under H6f.1's
+  rule it would fail two secants of X9 (7.5 and 3.1 SE) and four of X10 (3.2 to 6.6 SE), while its RMS gap to
+  U'-Local is only about 0.002 (X9) and 0.007 (X10). The header computed these departures before the run (up to 0.010
+  and 0.016) and said the bench could not resolve them; it was right about their size and wrong about the
+  resolution. ENGINE, one exponent for all levels (H = 0.73
+  and 0.80 measured at rest), is off by up to 0.05 at both ends of the ladder (regret up to 1.5 %). The square root's
+  regret reaches 76 % (X9) and 140 % (X10) at the highest level. LOCAL-C, the continuous form, stays within 0.003 of
+  U'-Local in exponent outside J.
+
+What it means. On drifts drawn from the laws the theorem assumes, U'-Local, fed a structure function measured once at
+rest, predicts the exponent of the optimal window to within the bench's resolution and the window itself within the
+pre-registered tolerance (x1.1, 1 % regret), crossovers included, and predicts where the optimum jumps when the balance
+stops being monotone. The raw slope reading (RAWS) overestimates the exponent, as the note's P2 says; RAWS gives no
+window, and the fixed-point reading (RAWF), whose exponent lies much closer, costs little in these arms (regret at most
+0.18 %). The local law matters most where the behaviour changes in kind (the jump) and where the index is far from 1/2
+(the square root). The shape control matters: when the noise changes shape with its level, the measured exponent
+follows the shape-aware prediction, not the theorem's exponent for a fixed shape. Limits: the generator is in the
+theorem's class, so the bench tests the mathematics, the calibration chain and the code, not a gyroscope; the filter is
+the class's (no bias integral), not the flown Mahony; the noise level is known at each level, so the live estimate and
+the note's P3 are not tested; one axis, 200 seeds.

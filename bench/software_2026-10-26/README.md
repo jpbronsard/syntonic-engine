@@ -1,9 +1,9 @@
 # Software bench of 26 October 2026
 
 The syntonic engine against adaptive estimators on synthetic fractional Brownian targets (steps 0 to 4), the
-quadrotor substrate in simulation (steps 5 to 6d) and cross-axis coupling on logged data of the X500 (step 7).
+quadrotor substrate in simulation (steps 5 to 6f) and cross-axis coupling on logged data of the X500 (step 7).
 Each pre-registered script carries its hypotheses and decision rule in its docstring and prints its own SHA-256
-at the top of its results; the hashes of the exploratory scripts of steps 7 and 6d are listed in NOTE.md, sections 12 and 14. `NOTE.md` is the bench note (version 1.5), `results/` holds every table as printed
+at the top of its results; the hashes of the exploratory scripts of steps 7, 6d and 6e are listed in NOTE.md, sections 12, 14 and 15. `NOTE.md` is the bench note (version 1.6), `results/` holds every table as printed
 (`*_results.txt`) and the per-seed rows (`*_rows.json`). The 110 MB bank checkpoints are not included; the
 scripts recompute them.
 
@@ -30,13 +30,20 @@ python evaluate_step6c.py                # its pre-registered verdict (needs ste
 python step6d_uprime_mechanism.py        # mechanism of the 6c failure; the exponent of U'   ~5 min
 python evaluate_step6d.py                # its pre-registered verdict (needs step 6c rows)
 python step6d_exploratory.py             # readings after the verdict (exploratory)
+python step6e_uprime_powered.py          # the exponent of U' with power (100 paired seeds)  ~9 min
+python evaluate_step6e.py                # its pre-registered verdict
+python step6e_exploratory.py             # readings after the verdict (exploratory)
+python step6f_uprime_local.py calibrate  # U'-Local: predictions frozen from the calibration  ~17 min
+python step6f_uprime_local.py pilot      # pilot: standard errors only, sets N               ~3 min
+python step6f_uprime_local.py evaluate   # held-out evaluation                                ~5 min
+python evaluate_step6f.py                # its pre-registered verdict
 python step6_diag1_structure_function.py # exploratory diagnosis of step 6 (also diag2, diag3)
 python run_step7.py                      # step 7: coupling on logged X500 data (data/)  ~10 s
 ```
 
-Steps 5 to 6d are the quadrotor substrate in software (NOTE.md, sections 9 to 11, 13 and 14); step 6b reads the oracle
+Steps 5 to 6f are the quadrotor substrate in software (NOTE.md, sections 9 to 11 and 13 to 16); step 6b reads the oracle
 and competitor rows of step 6 and checks that its own recomputation of the flown filter matches them exactly, and
-step 6c checks that its square-root variant reproduces the rows of step 6b, and the judge of step 6d that its replay reproduces step 6c.
+step 6c checks that its square-root variant reproduces the rows of step 6b, and the judge of step 6d that its replay reproduces step 6c; step 6f checks its filter decomposition against step 6's Mahony.
 Step 7 (NOTE.md, section 12) runs on three logged sessions of the X500, reduced in `data/` to the columns the
 scripts use (no position); `run_step7.py` unpacks them and runs the five step-7 scripts unchanged.
 

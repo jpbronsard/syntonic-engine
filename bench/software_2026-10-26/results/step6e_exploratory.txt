@@ -1,0 +1,15 @@
+(a) slope of the upward exponents on p_H, 95 % percentile intervals over 2000 draws
+    paired (one seed draw for the four arms): [0.888, 1.072]
+    unpaired (independent draws per arm):     [0.838, 1.118]
+
+(b) population optimum / U' window with the true H and lambda_H (V = 1, 256, 1/16)
+    U50: [0.983, 1.031, 1.06]
+    U60: [0.98, 1.038, 1.049]
+    U75: [0.979, 1.051, 1.033]
+    U90: [0.983, 1.048, 1.012]
+
+(c) predicted exponents, white noise of intensity S0(V) against step 6e's noise (line + floor + Butterworth)
+    U50: white up 0.500 down 0.500; 6e noise up 0.499 down 0.471
+    U60: white up 0.454 down 0.454; 6e noise up 0.453 down 0.430
+    U75: white up 0.400 down 0.400; 6e noise up 0.399 down 0.380
+    U90: white up 0.357 down 0.357; 6e noise up 0.356 down 0.341
