@@ -37,6 +37,12 @@ python step6f_uprime_local.py calibrate  # U'-Local: predictions frozen from the
 python step6f_uprime_local.py pilot      # pilot: standard errors only, sets N               ~3 min
 python step6f_uprime_local.py evaluate   # held-out evaluation                                ~5 min
 python evaluate_step6f.py                # its pre-registered verdict
+python step6g_real_noise.py              # the law on the X500's logged vibration noise, synthetic motion (STEP6G_SMOKE=1 for the smoke run)  ~10 s
+python step6g_exploratory.py             # readings after the verdict: bias calibrated, no rate limit (exploratory)
+python step6g_exploratory2.py            # filters initialised at the true angle (exploratory)
+python step6g_exploratory3.py            # the law's window as a fixed window from the true angle (exploratory)
+python step6h_fused_lambda.py            # step 6h, amendment 1: drift from the gyro at the operating condition, start-up schedule  ~5 s
+python step6h_exploratory.py             # the Ki mechanism: bias loop frozen during start-up (exploratory)
 python step6_diag1_structure_function.py # exploratory diagnosis of step 6 (also diag2, diag3)
 python run_step7.py                      # step 7: coupling on logged X500 data (data/)  ~10 s
 ```

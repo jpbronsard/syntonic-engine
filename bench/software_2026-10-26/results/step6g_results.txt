@@ -1,0 +1,31 @@
+step6g_real_noise.py sha256 54f0c7fc86c9525391b40c55c135233b36afb3aae6be7085469045876d2dfd78 | FULL | seeds [600, 601, 602, 603, 604, 605, 606, 607, 608, 609]
+gyro fact (S6-idle, motors idling): lambda_hat = 8.943e-09 rad^2/s = (0.0054 deg/s/sqrt(Hz))^2; data-sheet ratio 3.7; Allan-deviation slope -0.67 (ARW: -0.5)
+S6-idle: done (2 s)
+S6-idle +gyro-lp: done (4 s)
+S6-low: done (6 s)
+S6-low +gyro-lp: done (8 s)
+S5-half: done (8 s)
+S5-half +gyro-lp: done (8 s)
+S7-flight: done (9 s)
+S7-flight +gyro-lp: done (9 s)
+runtime 9 s
+written /tmp/claude-0/-home-claude/24305147-80cd-5912-8fb0-ba62c0c1ce45/scratchpad/step6g/results/step6g_rows.json
+
+=== STEP 6g verdicts (seed medians for windows and regret, means for RMS ratios) ===
+segment      rec tiltSD  class  law tau  orc tau  regret RMS law RMS orc  RMS KF law/KF lp dRMS
+S6-idle     34.8    5.7   1.85     9.06     3.60  1434.1%   2.228   0.146   0.084 26.581   -0.0%   [reported]
+S6-low      39.8    5.6   1.07    10.04     3.89  1747.2%   2.193   0.119   0.071 30.947   -0.0%   [judged]
+S5-half      8.0   50.4   1.85     2.16     1.40   339.3%   8.732   1.987   0.762 11.455   +0.0%   [judged]
+S7-flight    5.5   65.1   1.45     1.52     2.26*    7.4%   2.457   2.290   2.338  1.051   -0.1%   [reported]
+  * oracle window above 25 % of the record: window criterion not judged, regret only
+
+H6g.1 white at engine scales (class ratio <= 1.3, judged cells): FAIL
+H6g.2 the law lands (regret <= 10 %, window x1.5 where judgeable): FAIL
+H6g.3 parity with tuned Kalman (<= 1.10): FAIL
+H6g.4 gyro low-pass changes RMS by < 5 %: PASS
+
+Reported: lambda variants (RMS mean, x2 / /2 relative to 6g):
+  S6-idle    x2 1.000  /2 1.000   KF-OPT tuning (R mult, QG mult) medians 1, 0.25   s2 by scale [2.3462e-05, 3.4767e-05, 1.8787e-05]
+  S6-low     x2 1.000  /2 1.000   KF-OPT tuning (R mult, QG mult) medians 128, 0.25   s2 by scale [2.1639e-05, 2.2837e-05, 2.3049e-05]
+  S5-half    x2 1.000  /2 1.000   KF-OPT tuning (R mult, QG mult) medians 256, 0.25   s2 by scale [0.006481749, 0.005376027, 0.003504329]
+  S7-flight  x2 1.000  /2 1.000   KF-OPT tuning (R mult, QG mult) medians 0.354, 0.25   s2 by scale [0.005750991, 0.006421777, 0.008344766]

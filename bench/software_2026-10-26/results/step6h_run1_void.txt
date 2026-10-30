@@ -1,0 +1,17 @@
+step6h_fused_lambda.py, first run, sha256 83eabb571ebec18c4f237dddb87cc531c14a46d4fa1900cfd743f16e7d4b434e, 30 Oct 2026 13:46 UTC. VOID.
+The start-up schedule began at the window floor (9 ms), where the Ki rule tied to the window explodes (Ki = Kp^2 / 4 zeta^2 = 940 at
+tau = 9 ms); the engine itself starts at 0.5 s. The run also crashed at the JSON dump (int64 keys), after printing. Its printed table,
+kept for the record (RMS in deg, steady part, 10 seeds; lambda_eff read on the fused residual at 1 to 4 s, floored at the idle fact):
+
+segment      rec lam_eff/hat  tau law orc-T tau orc-S tau  RMS law RMS orc-S RMS orc-T  RMS KF regret(S) law/KF
+S6-idle     34.8         1.0     45.8       2.6       3.6   77.943     0.146     0.106   0.084  52985.2% 929.813   [judged]
+S6-low      39.8         1.0     49.2       2.9       3.9   80.281     0.119     0.114   0.071  66951.4% 1133.021   [judged]
+S5-half      8.0         nan      nan      50.0       1.4      nan     1.987     0.196   0.762      nan%    nan   [reported]
+S7-flight    5.5         nan      nan       3.8       2.3      nan     2.290     2.067   2.338      nan%    nan   [reported]
+H6h.1 FAIL (lambda_eff / lambda_hat = 1.0 in both judged cells: the fused reading at 1 to 4 s lies below the white extrapolation)
+H6h.2 FAIL  H6h.3 FAIL  H6h.4 FAIL
+
+D_H(L) of z_raw (rad^2) by scale / white-only prediction 6 s2 / L:
+S6-idle    32:4.40e-03/3.52e-03 64:3.26e-03/1.76e-03 128:8.81e-04/8.81e-04 250:4.34e-04/4.51e-04 500:2.39e-04/2.25e-04 1000:7.31e-05/1.13e-04 2000:5.57e-05/5.64e-05 4000:1.59e-05/2.82e-05
+S6-low     32:4.06e-03/4.06e-03 64:2.14e-03/2.03e-03 128:1.08e-03/1.01e-03 250:6.34e-04/5.19e-04 500:4.71e-04/2.60e-04 1000:9.83e-05/1.30e-04 2000:1.18e-04/6.49e-05 4000:2.45e-05/3.25e-05
+The H6h.1 failure stands on its own terms and motivated amendment 1 (lambda read from the gyro alone at the operating condition).

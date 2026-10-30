@@ -1,0 +1,7 @@
+step6g_exploratory2.py sha256 145a1c756538 | init at truth, bias calibrated, no rate limit | seeds [600, 601, 602, 603, 604, 605, 606, 607, 608, 609]
+segment      rec  class  law tau  orc tau  regret RMS law RMS orc  RMS KF law/KF    x2    /2  KF tuning (R, QG)
+S6-idle     34.8   1.85    30.00    23.68* 2121.4%   0.639   0.032   0.073  8.703 0.981 1.000  256, 0.25
+S6-low      39.8   1.07    30.00    12.17* 1833.5%   0.755   0.043   0.063 12.071 0.960 1.004  256, 0.25
+S5-half      8.0   1.85    30.00    50.00* 6295.4%   4.976   0.142   0.775  6.423 1.000 1.000  256, 0.25
+S7-flight    5.5   1.45    30.00     1.51*  -25.8%   2.114   2.849   2.774  0.762 1.000 1.000  256, 4
+  * oracle at the record limit (window > 25 % of record)

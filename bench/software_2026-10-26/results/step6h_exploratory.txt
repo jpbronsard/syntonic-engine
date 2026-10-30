@@ -1,0 +1,6 @@
+step6h_exploratory.py sha256 259b59bb346d
+segment     tau law orc-S tau orc-T tau |  SLAVED  FROZEN    NOKI |   orc-S   orc-T | regret FROZEN / NOKI vs orc-S
+S6-idle        40.5       1.1      23.6 |   4.720   0.057   0.057 |   0.180   0.032 |  -68.5% /  -68.5%
+S6-low         25.6       4.4      12.2 |   4.933   0.067   0.067 |   0.178   0.043 |  -62.5% /  -62.5%
+S5-half        53.7       1.4      50.0 |  11.211   1.318   1.318 |   1.971   0.144 |  -33.2% /  -33.2%
+  RMS in deg, steady part; orc-S = fixed window from the first accel sample, orc-T = from the true angle

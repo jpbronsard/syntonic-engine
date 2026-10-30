@@ -1,6 +1,6 @@
 # Software bench of the syntonic engine against adaptive filters
 
-Bench note, version 1.7. 26 to 28 October 2026. SyntonicAI Recherche.
+Bench note, version 1.8. 26 to 30 October 2026. SyntonicAI Recherche.
 Scripts, tables and per-seed rows: `bench/software_2026-10-26/` of the syntonic-engine repository (the
 bank checkpoints, 110 MB each, are recomputed by the scripts).
 Version 1.1 adds section 8: the engine rows re-run with the identification exactly as released in
@@ -23,6 +23,10 @@ performance hypothesis fails at H = 0.75. Step 6f: Theorem U'-Local against the 
 raw local index, predictions frozen from a calibration before the evaluation, noise levels that keep the noise's shape;
 seven of seven hypotheses hold, the validity check included.
 Version 1.7 (28 Oct): the note Theorem U'-Local is deposited (DOI 10.5281/zenodo.23734084); section 16 cites it. No result changes.
+Version 1.8 (30 Oct) adds section 17, steps 6g and 6h: the attitude estimator on the X500's own logged vibration noise with
+synthetic motion. Both pre-registered forms fail (3 of 4 hypotheses each); the exploratory passes locate the failure in the gyro
+fact measured at idle, the start-up, and the bias integral tied to the window, and a recipe found on the same records lands the
+law's filter at parity with a tuned Kalman. A recipe, not a result: to be pre-registered on the gimbal bench.
 
 ## 1. Purpose and verdict
 
@@ -706,3 +710,99 @@ follows the shape-aware prediction, not the theorem's exponent for a fixed shape
 theorem's class, so the bench tests the mathematics, the calibration chain and the code, not a gyroscope; the filter is
 the class's (no bias integral), not the flown Mahony; the noise level is known at each level, so the live estimate and
 the note's P3 are not tested; one axis, 200 seeds.
+
+## 17. Steps 6g and 6h (30 Oct 2026): the attitude estimator on real vibration noise, synthetic motion
+
+`step6g_real_noise.py`, pre-registered; its header is the rules. Hash of the pre-registered copy 54f0c7fc (run at 13:34 UTC on
+30 Oct; the smoke run before it caught one code fault, a scalar lambda_hat not broadcast to the seed columns, fixed before the
+full run and recorded here). The committed copy, f3a9ee5b, differs from it by one line: the data path, which pointed at the
+author's scratchpad layout. Rows `results/step6g_rows.json`, verdicts `results/step6g_results.txt`. Three exploratory passes
+after the verdict (`step6g_exploratory.py` 39a3a669, `step6g_exploratory2.py` 145a1c75, `step6g_exploratory3.py` 3f9bbe18),
+then a second pre-registered step, `step6h_fused_lambda.py` (first run 83eabb57, void, kept in `results/step6h_run1_void.txt`;
+amendment 1, 12751351, rows `results/step6h_rows.json`), and its exploratory pass (`step6h_exploratory.py` 259b59bb). All
+runs in this session were written and run by the assistant inside the working session, hashes printed before each run; none
+has been reproduced by the author yet.
+
+Question. Every step-6 bench used simulated noise; the one real-noise test so far (the Gauge, 29 Oct, outside this repository)
+flagged the raw 1 kHz gyro out of class on every segment. Before the gimbal bench: does the law, reading the accel noise live
+and the gyro's angle random walk as a fact, land on the oracle window when the noise is the X500's own vibration?
+
+Data: the raw SD logs of `data/` (250 Hz rows, four gyro sub-samples per row). Segments: S6-idle (sess6, 65 to 100 s, motors
+idling, ballasted frame still; reported, and the source of the gyro fact), S6-low (sess6, 5 to 45 s, ~0.9 A; judged), S5-half
+(session 5, 15 to 23 s, ~9.8 A, held; judged where the record allows), S7-flight (crash7, 19 to 24.5 s; reported, real motion
+in the streams). Roll axis: accel tilt atan2(ay, az), gyro = mean of the four sub-samples per row, DT = 4 ms. Synthetic truth as
+in step 6 (Ornstein-Uhlenbeck, sd 5 deg, 2 s), seeds 600 to 609 varying the truth only; gyro = dtheta/dt + the real rate, accel =
+theta + the real tilt, truth = theta + the record's mean tilt. SYN-6B unchanged at DT = 4 ms (block scales 32, 64, 128 ms;
+Ki = Kp^2 / 4 zeta^2; floor DT/0.45, ceiling 30 s, rate limit 0.4 s/s, start 0.5 s); the gyro fact from the Allan variance of
+the idle record at 0.128 to 1.024 s: lambda_hat = 8.9e-9 rad^2/s = (0.0054 deg/s/sqrt Hz)^2, 3.7 times the ICM-42688-P data
+sheet, Allan slope -0.67. Comparators: the best fixed window on the step-6 grid, refined; a two-state Kalman tuned per seed on
+the scored data over Q_G in lambda_hat x {1/4 .. 4} and R in var(tilt) x 2^(-8..8) (clairvoyant). Scoring: skip min(10 s, 30 %),
+steady RMS in degrees.
+
+Measured before the rules were written (no score computed): the accelerometer at 250 Hz has no line to notch; its vibration is
+broadband (variance spread evenly from 20 Hz to Nyquist, aliased), per-sample tilt noise 5.7 deg idle, 5.6 low throttle, 50 half
+throttle. The gyro's vibration sits in a 250 to 500 Hz cluster. A planned notch arm was therefore replaced by a 150 Hz gyro
+low-pass arm. Also measured the same morning, outside the pre-registration: accel-tilt innovations are Gaussian in every
+segment (excess kurtosis -0.8 to +1.0, nothing beyond 5 robust sigma).
+
+Pre-registered verdicts (6g). H6g.1, white at the engine's scales (ratio of D_H(l) l / 6 across 32, 64, 128 ms <= 1.3 on the
+real tilt): FAIL (1.07 at low throttle, 1.85 at idle and at half throttle). H6g.2, the law lands (regret <= 10 %): FAIL; regret
+1434 % (idle), 1747 % (low), 339 % (half); law windows 9.1, 10.0, 2.2 s against oracle 3.6, 3.9, 1.4 s; RMS 2.2, 2.2, 8.7 deg
+against 0.15, 0.12, 2.0. H6g.3, parity with the tuned Kalman (<= 1.10): FAIL (27, 31, 11). H6g.4, the gyro low-pass changes
+the RMS by < 5 %: PASS (0.0 to 0.1 %). The lambda x2 and /2 variants scored identically: the window never reached the law's
+target, the 0.4 s/s ramp from 0.5 s still running through the scored part of a 40 s record. S7-flight, reported: regret 7 %,
+law / Kalman 1.05, on 5.5 s with the frame's real motion counted as noise.
+
+Exploratory passes (not judged). (1) Bias calibrated by the record mean (0.04 deg/s) and the rate limit lifted: the law goes to
+its 30 s ceiling and the RMS rises to 6 to 7 deg; the integrated gyro wanders by 0.01 to 0.04 deg over a record, so the gyro is
+not the problem. (2) Every filter initialised at the true angle: the oracle moves to 12 to 50 s with RMS 0.03 to 0.14 deg,
+below the tuned Kalman (0.06 to 0.78); the law's filter stays at 0.6 to 5 deg, because during its 1 s warm-up at the 0.5 s
+start window it takes in the accelerometer's noise (0.5 deg at idle, 4.5 at half throttle), then switches to 30 s and forgets
+it in about a minute. (3) The law's window as a fixed window from the true angle: s2 read by the engine 1.88e-5, 2.16e-5,
+3.50e-3 rad^2 s; law windows 45.8, 49.2, 626 s (capped 30); oracle 24.5, 10.0, unresolved; regret 16 % and 42 % uncapped,
+2.3 % and 24 % capped; fixed 1, 3, 10 s windows give 0.16, 0.09, 0.04 deg at idle and 0.19, 0.10, 0.04 at low throttle. Long
+windows are right on this frame; the records (35 to 40 s) resolve the valley only up to about 10 s.
+
+Step 6h, pre-registered after that diagnosis, on the same records (consistency, not confirmation). Two changes, both from the
+corpus: lambda read at the scale of seconds, and a start-up schedule tau(t) = min(tau_law, max(start, t)), the running mean
+until the law's window is reached. First run, void: the schedule began at the window floor (9 ms), where Ki = Kp^2 / 4 zeta^2
+is 940 and the bias estimate explodes; the engine itself starts at 0.5 s. But its H6h.1 failed on its own terms and stands: the
+fused residual's second-difference structure function at 1 to 4 s lies below the white extrapolation in both judged cells
+(idle 7.3e-5 against 1.13e-4 at 1 s, 1.6e-5 against 2.8e-5 at 4 s), so the accelerometer's wander is not a drift source at those
+scales, and 40 s records cannot resolve a lambda of 1e-7 there (a 4 % effect at 4 s on nine blocks). Amendment 1: start at
+0.5 s; lambda from the gyro alone at the operating condition (Allan variance of the raw rate at 1, 2, 4 s over the record,
+floored at the idle fact); bias calibrated by the record mean (an arming calibration, optimistic for held frames); H6h.1
+restated as lambda_op / lambda_hat >= 2 at low throttle. Verdicts: H6h.1 PASS (3.7 at low throttle, 136 at half); H6h.2,
+window within x1.5 of the clean oracle: FAIL (40.5 against 23.6 s, x1.7; 25.6 against 12.2 s, x2.1; was x1.9 and x5 with the
+idle fact); H6h.3, regret against the same-start oracle <= 10 %: FAIL; H6h.4, parity: FAIL. The filter sits at 4.7 and 4.9 deg
+against a same-start oracle (fixed window from the first accel sample) of 0.18 deg at 1.1 and 4.4 s.
+
+Step 6h exploratory: the Ki mechanism. During the 0.5 s start the error is about 5 deg and Ki = 0.3, which drives the bias
+estimate off by about 1 deg/s in one second; the window then grows to 25 to 40 s, Ki shrinks as 1 / tau^2, and the bias loop's
+time constant 4 zeta^2 tau is 5 to 9 minutes: the wrong bias is never repaired and, integrated over the window, it is the
+degrees of error in every run above. Step 6b never met it: windows of 1 to 4 s, segments of 120 s. With the bias loop frozen
+while t < tau_law (or removed, the bias being calibrated), same lambda_op and schedule: RMS 0.057 (idle), 0.067 (low), 1.32
+(half, 8 s record) deg, against the same-start oracle 0.180, 0.178, 1.97 (regret -69, -63, -33 %), the clairvoyant Kalman
+0.074, 0.063, 0.73 (ratios 0.77, 1.06, 1.8), and the clean truth-initialised oracle 0.032, 0.043, 0.14 (x1.8, x1.6, x9).
+
+Reading. (1) The law's answer on this frame is "trust the gyro for tens of seconds", and the oracle agrees in kind. The
+accelerometer as logged is a poor tilt reference, largely because the 250 Hz logger aliases broadband vibration into the band
+without the IMU's anti-alias filter; H6g.1 "passed" at low throttle because aliased broadband vibration is white by accident.
+(2) The drift the law misses is the gyro's own low-frequency noise at throttle, not the accelerometer: the limit step 6b
+declared. Read from the gyro at the operating condition, the window comes within x1.7 to x2.1 of the clean oracle. The fused
+reading of U'-Local needs records of minutes; it is the tool for the gimbal bench, not for these logs. (3) The Ki rule tied to
+the window does not scale to long windows on a real start; it is the largest error source in every run here. The bias channel
+needs its own time constant, from the gyro's bias instability (the Allan minimum): a second fact, a second window. (4) Start-up
+is a rule of its own: the schedule beat every fixed window with the same start, with no constant. (5) Nothing here is
+confirmatory: the recipe was found on the records it is scored on.
+
+What it decides for the gimbal bench (STEP-0): log the accelerometer at the IMU's full rate with its anti-alias filter on, or from
+the isolated IMU, and re-measure the per-sample tilt noise first; records of at least 5 minutes per throttle level (windows of
+10 to 60 s to resolve); two gyro facts, the angle random walk at rest (motors off) and the low-frequency noise per throttle level
+(Allan variance at 1 to 4 s, readable live from the gyro alone); bias calibrated at arming, bias loop frozen during start-up,
+its own time constant from the Allan minimum; the start-up schedule in the engine in place of the rate-limited ramp; no gyro
+pre-filter; nothing to notch. Pre-register there the three fixes together against the tuned Kalman, parity as the ceiling.
+
+Status: measured, pre-registered, negative in both pre-registered forms; the exploratory recipe lands the law's filter at parity
+with a tuned Kalman on real vibration noise, found on the same records and therefore not a result. Real noise, synthetic
+motion, held frames, one axis. The gimbal bench supersedes it.

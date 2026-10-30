@@ -1,0 +1,21 @@
+step6h_fused_lambda.py sha256 127513513b4e1b21cfb184fd901e08ff2d08aab3ac6ae031ab7655d100f3718e | seeds [600, 601, 602, 603, 604, 605, 606, 607, 608, 609]
+Wiener calibration c(L) = D_H / (lambda L): {32: 1.0018, 64: 0.9928, 128: 0.9829, 250: 0.969, 500: 0.9935, 1000: 1.0438, 2000: 1.114, 4000: 1.0454}
+gyro fact lambda_hat = 8.943e-09 rad^2/s (idle, as in 6g)
+
+segment      rec  lam_op/hat  tau law orc-T tau orc-S tau  RMS law RMS orc-S RMS orc-T  RMS KF regret(S) law/KF
+S6-idle     34.8         1.3     40.5      23.6       1.1    4.720     0.180     0.032   0.074   2536.6% 63.566   [judged]
+S6-low      39.8         3.7     25.6      12.2       4.4    4.933     0.178     0.043   0.063   2670.2% 77.888   [judged]
+S5-half      8.0       136.0     53.7      50.0       1.4   11.211     1.971     0.144   0.734    468.5% 15.268   [reported]
+S7-flight    5.5         nan      nan       1.5       1.8      nan     2.828     2.849   2.773      nan%    nan   [reported]
+
+H6h.1 (amended) the gyro drift at throttle exceeds the idle fact (lambda_op/lambda_hat >= 2 at low throttle): PASS
+H6h.2 window within x1.5 of the clean oracle: FAIL
+H6h.3 filter regret vs same-start oracle <= 10 %: FAIL
+H6h.4 parity with tuned Kalman <= 1.10: FAIL
+
+Reported: D_H(L) of z_raw (rad^2) by scale, and the white-only prediction 6 s2 / L
+  S6-idle    32:4.40e-03/3.52e-03 64:3.26e-03/1.76e-03 128:8.81e-04/8.81e-04 250:4.34e-04/4.51e-04 500:2.39e-04/2.25e-04 1000:7.31e-05/1.13e-04 2000:5.57e-05/5.64e-05 4000:1.59e-05/2.82e-05
+  S6-low     32:4.06e-03/4.06e-03 64:2.14e-03/2.03e-03 128:1.08e-03/1.01e-03 250:6.34e-04/5.19e-04 500:4.71e-04/2.60e-04 1000:9.83e-05/1.30e-04 2000:1.18e-04/6.49e-05 4000:2.45e-05/3.25e-05
+  S5-half    32:1.22e+00/6.57e-01 64:5.04e-01/3.28e-01 128:1.64e-01/1.64e-01 250:7.21e-02/8.41e-02 500:5.93e-02/4.20e-02 1000:4.38e-02/2.10e-02 2000:5.76e-02/1.05e-02 4000:nan/5.25e-03
+  S7-flight  32:1.08e+00/1.08e+00 64:6.02e-01/5.39e-01 128:4.07e-01/2.70e-01 250:1.38e-01/1.38e-01 500:4.09e-02/6.90e-02 1000:1.65e-03/3.45e-02 2000:nan/1.73e-02 4000:nan/8.63e-03
+runtime 3 s
