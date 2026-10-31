@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cadence bench (`bench/cadence_2026-10-31/`, self-contained on the model of `examples/servo_bench.py`; script and predictions pushed before any scored run; written and run by the assistant, not yet reproduced by the author): each joint's servo frame chosen live as the slowest frame whose floor stays under the law's window, against fixed frames of 1, 2 and 3 ms, at 2 kHz, 20 paired runs per arm. Five of six predictions hold, the gate included (exact reproduction of `servo_bench.py`). The main one fails: the adaptive frame cuts the baton-tip error by 20 % against today's 3 ms frame at a mean 541 Hz, 80 % of the gain of a fixed 1 ms frame for 54 % of its frames, but stays 7.1 % above the 1 ms frame, outside the 2 % margin. Allowing it to slow down below 3 ms costs a further 6.1 %. Frames under 3 ms are a simulation probe (the bench's servos accept about 330 Hz).
+
 ## 0.2.6 (30 Oct 2026)
 
 Bench and documentation only; the code is that of 0.2.0.

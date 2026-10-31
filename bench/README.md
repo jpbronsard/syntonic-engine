@@ -15,3 +15,5 @@ The scripts import the MAESTRO 1 simulation model (presto.py, sim.py, maestro_mo
 | flow_v10_seeds.py | the syntonic engine against the PID over ten paired noise draws | summary_v10_seeds.json |
 
 Each script says in its header what was fixed before it ran and which predictions it tested. `docs/bench_note.md` records which of those predictions held and which failed.
+
+`cadence_2026-10-31/` is self-contained (it runs on the model of `examples/servo_bench.py`, no MAESTRO 1 simulation needed): the servo frame chosen live by the law, each joint taking the slowest frame whose floor stays under its window, against fixed frames of 1, 2 and 3 ms. Its `NOTE.md` records the predictions and which held.
