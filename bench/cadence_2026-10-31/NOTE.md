@@ -75,3 +75,54 @@ Time on the floor (the law's window below the floor of the current frame, baton-
 
 From the repository root (Python 3.9 or later, numpy, scipy): `python bench/cadence_2026-10-31/cadence_bench.py`
 (about 10 minutes on two cores; it writes `results/summary.json`).
+
+## Diagnostic: window against command hold (exploratory, after the verdict)
+
+Script `diag_hold_window.py` (sha256 1b82a0acc90422c2591edb7763fe0ab916e4b0eedd9e3d6ad67a615dfb26f1fd), pushed before
+its run (commit 66626da); results `results/diag_hold_window.json`. No prediction judged. A servo frame bounds the window
+(its floor) and holds the command, plan and correction, between two sends. Each column here gets its own floor, send
+period and correction refresh, on the same 20 paired runs. Gate: the 3 ms and 1 ms columns reproduce the cadence arms
+run by run, difference exactly zero.
+
+| Column | Command sent every | Floor | Pooled tip error (mm) | Cells (A steady, A step, B steady, B step) |
+|---|---|---|---|---|
+| A | 3 ms | 1.85 ms | 1.129 | 0.716, 0.869, 1.306, 1.457 |
+| D | 1 ms | 1.85 ms | 0.851 | 0.538, 0.700, 0.956, 1.097 |
+| E | 1 ms (correction refreshed every 3 ms) | 1.85 ms | 0.988 | 0.667, 0.828, 1.088, 1.262 |
+| B | 1 ms | 1.11 ms | 0.839 | 0.516, 0.683, 0.945, 1.090 |
+| C | 3 ms | 1.11 ms (a probe, not realizable) | 1.309 | 0.899, 1.020, 1.524, 1.637 |
+
+- Of the 0.290 mm gained from 3 ms to 1 ms, sending the command every 1 ms gives 0.278 mm (96 %, A to D), about half
+  from the plan (A to E, 0.140 mm) and half from the correction (E to D, 0.138 mm). Lowering the floor then gives
+  0.012 mm (4 %, D to B), though D's window sits on its floor 44 % of the time. Run by run: D against A 0.73 to 0.82;
+  B against D 0.95 to 1.00.
+- With the command held 3 ms, a floor under the loop delay makes things worse: C is 16 % above A (1.09 to 1.30 run by
+  run), as the delay rule of runs v8 and v9 says.
+- On this arm, the window on its floor costs little (about 1.4 %); what limits is the time the command is held. That
+  is why P3 failed: when the law's window allows 3 ms, the plan and the correction are still held 3 ms.
+
+## Timing control: does the law know when to speed up? (pre-registered T1)
+
+Script `timing_control.py` (sha256 d17bf7ec729e06f92fd0287b096170eebd12a0a44851b9f58790c0d666770157), pushed before
+its run with its prediction (commit a0cbc91), design agreed with the author; results `results/timing_control.json`.
+SH replays AD's own schedule from the same run (sends and frames, hence floors) with the scored 30 s shifted by 15 s:
+same frames, same shares, same changes, no longer lined up with the motion. JF gives each joint one fixed frame, the
+period on the 0.5 ms grid closest to its mean period in AD. Gates: the cadence arms reproduce `summary.json` and AD
+replayed unshifted reproduces AD, run by run, both with a difference of exactly zero.
+
+| Arm | Pooled tip error (mm) | Mean frame rate (Hz) | Cells (A steady, A step, B steady, B step) | Time on the floor |
+|---|---|---|---|---|
+| AD, the law's timing | 0.898 | 541 | 0.566, 0.752, 0.972, 1.182 | 18 % |
+| JF, one frame per joint | 0.923 | 546 | 0.610, 0.769, 1.008, 1.196 | 24 % |
+| SH, AD's frames shifted 15 s | 1.021 | 541 | 0.630, 0.822, 1.135, 1.344 | 35 % |
+
+- T1 (AD at least 5 % below SH, and below it in at least 18 of 20 runs): **held**. AD is 12 % below SH (0.880),
+  below it in 20 of 20 runs (0.85 to 0.92 run by run). With the same frames, the law's timing is worth 12 %: it
+  puts its fast frames where the motion needs them.
+- Described: AD is 2.7 % below JF and below it in all 20 runs (0.92 to 0.99); JF is 10 % below SH. Against a fixed
+  frame per joint, chosen from the law's own average, the timing adds less: most of what SH loses is fast frames at
+  the wrong moments. JF is not law-free: its periods come from AD (in excerpt A mostly 2, 3, 2.5, 1.5, 2.5 and 2 ms for
+  RJ1 to RJ6).
+- Reading: the law's window works as a measure of how much cadence the motion needs at each instant. As a cadence
+  signal it is right in time (T1); the size of what it adds depends on the reference (12 % against the same frames
+  mistimed, 2.7 % against the best fixed frame per joint, 7 % against the fixed-frame frontier at the same budget).
