@@ -126,3 +126,35 @@ replayed unshifted reproduces AD, run by run, both with a difference of exactly 
 - Reading: the law's window works as a measure of how much cadence the motion needs at each instant. As a cadence
   signal it is right in time (T1); the size of what it adds depends on the reference (12 % against the same frames
   mistimed, 2.7 % against the best fixed frame per joint, 7 % against the fixed-frame frontier at the same budget).
+
+## Cadence along the e-geodesic (pre-registered E1 to E3)
+
+Script `egeodesic_cadence.py` (sha256 d58a4ae9838dd914fa87e87319381419063034bf081568b9b12ca01b07127d49), pushed before
+its run with its predictions (commit 152f6ee), idea and go from the author; results `results/egeodesic_cadence.json`.
+EG: the frame follows a copy of the law's window carried on the e-geodesic of Dual Geodesy (1/tau stepped toward the
+law's raw window at the engine's own bounded speed, without the floor), mapped by the engine's floor rule onto the
+loop's finest grid (1, 1.5, 2, 2.5, 3 ms). GR: the same grid from the raw law. AD: the staircase {1, 2, 3} ms. EGsh:
+EG's own schedule shifted 15 s. Gates (F3, F1 and AD reproduce `summary.json`; EG replayed unshifted reproduces EG):
+difference exactly zero.
+
+| Arm | Pooled tip error (mm) | Mean frame rate (Hz) | Gain against the fixed frames at that rate | Switches per joint per second | Mean switch |
+|---|---|---|---|---|---|
+| AD, staircase | 0.898 | 541 | 7.1 % | 0.44 | 1.0 ms |
+| GR, fine grid, raw law | 0.911 | 504 | 6.7 % | 0.91 | 0.5 ms |
+| EG, fine grid, e-geodesic | 0.912 | 504 | 6.7 % | 0.90 | 0.5 ms |
+| EGsh, EG shifted 15 s | 1.028 | 504 | | | |
+
+Cells (A steady, A step, B steady, B step): EG 0.574, 0.757, 0.982, 1.208; EGsh 0.638, 0.824, 1.147, 1.352. The script's
+docstring quotes AD's gain as 7.2 %, from rounded values; computed exactly here it is 7.1 %.
+
+- E1 (EG at or below 0.95 of EGsh, below it in at least 18 of 20 runs): **held**. EG is 11.3 % below EGsh (0.887),
+  in 20 of 20 runs (0.85 to 0.93): the timing holds on the path.
+- E2 (gain at least 5 %): **held**, 6.7 %.
+- E3 (within 1 point of the staircase's gain): **held**, 6.7 % against 7.1 %. The path neither adds nor costs.
+- Described: the path replaces the 1 ms steps by 0.5 ms steps, twice as many, for the same total travel (about
+  0.45 ms of frame change per joint per second in both). EG and GR are within 1 % of each other in every run (0.997
+  to 1.010): the e-geodesic's speed bound almost never binds, because the law's raw window already moves slowly (its
+  statistics average over about a second). EG uses 7 % fewer frames than AD and is 0.5 to 2.9 % less accurate run by
+  run, on the same efficiency line.
+- Reading: the continuous path is the same cadence as the staircase, made smooth, at the same efficiency and with the
+  same knowledge of when. On this bench the geometry gives the form of the cadence, not more accuracy.
