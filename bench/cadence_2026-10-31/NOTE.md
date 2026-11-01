@@ -292,3 +292,27 @@ is judged, and a test of what follows takes fresh seeds.
   (2 to 6 ms) are 4 to 11 times shorter than the servo's time constant, which leaves the loop lightly damped. The law
   decides when and the stability stays with the machine, as the main statement says; the damping is the machine's
   side of that split, now measured.
+
+## The correction limit from the authority fact (pre-registered L1 to L3)
+
+Script `authority_limit.py` (sha256 fa8b49dc1f119ebf2d4c4c52df7adf3459841100d808a451c437a68de06b4a1c), pushed with the
+engine option `limit='authority'` before its run (c7ece3c); results `results/authority_limit.json`. Fresh seeds 16 to
+20, excerpts A and B, the adaptive engine with the 5 degree limit and with the limit servo_tau x w0 per joint, paired
+on the same seeds; the gate reproduced plan_intervention.run exactly.
+
+- L1 (the authority limit does not bind): **held**. No joint at its limit in any run (0 %). With 5 degrees, RJ4 and RJ6
+  sit at it 0.6 to 0.7 % of the time at the published tempo in A and 3.6 to 3.7 % in B, never at 0.7 or 0.5.
+- L2 (the tip error falls at the published tempo): **held**. 7 to 8 % lower in every run of A (median 0.73 to 0.68
+  mm), 32 to 34 % lower in every run of B (median 1.27 to 0.85 mm).
+- L3 (nothing changes at the slow tempos): **held**. The paired runs are identical; the limit never bound there.
+- Described. Frozen window with the authority limit: k = 0.88 (U70) and 0.81 (U50) in A, 0.83 and 0.78 in B; three of
+  the four inside the causal test's K1 band, which this does not re-judge. Blocked joint (RJ4 held still for 2 s at
+  the published tempo, seed 16): the command moves up to 5.4 degrees from the plan with the 5 degree limit and up to
+  12.9 degrees with the authority limit; it is back within 0.2 degree 0.25 and 0.33 s after release in A, 0.52 and 0.42
+  s in B. A wider limit lets a blocked servo be pushed further from the plan, bounded by the lag the servo itself can
+  produce.
+- Not to be read as a gain over the PID: the bench's PID clips its correction at the same 5 degrees, and a comparison
+  after this change gives it the same authority clip.
+- What it means. The limiter stated from the authority fact removes the extra tip error at the published tempo,
+  changes nothing elsewhere, and fits no number. Adopting it as the default (Python and Rust, the published bench
+  re-run, the README's numbers, the main statement's list of design constants) is JP's decision.
