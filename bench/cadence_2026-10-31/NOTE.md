@@ -265,3 +265,30 @@ omega_phase_rates.run exactly in both excerpts. k = 1 when the tip error locked 
   causal part at the joints), and the law trades noise for drift as Theorem U' says (K3). The tip error locked to the
   plan is not only the acceleration: at the published tempo of excerpt B it is mostly a part that disappears at tempo
   0.7. The prediction of a pure tempo-squared scaling at the tip is refuted.
+
+## Exploratory passes after the causal test (readings, not tests)
+
+Seeds 1 to 5 (all used before) and noise-free runs, frozen window as in `results/plan_intervention.json`; nothing here
+is judged, and a test of what follows takes fresh seeds.
+
+- The slew-limit reading is **refuted** (`exploratory/slew_explo.py`): no joint reaches its slew limit at any tempo in
+  either excerpt, and removing the limit leaves k unchanged (0.72 and 0.67 in A, 0.33 and 0.31 in B, with or without).
+- Without encoder noise the bench gives the plan-locked error itself and the same k (0.71 and 0.67; 0.33 and 0.31):
+  the effect is deterministic (`exploratory/loop_dynamics_explo.py`).
+- What it is: the engine's correction limit. At tempo 1 the correction of RJ4 and RJ6 sits at its 5 degree limit 0.6
+  to 0.7 % of the time in A and 3.7 % in B, never at tempo 0.7 or 0.5. With the limit at 30 degrees
+  (`exploratory/limit_explo.py`, noise-free), the tip error at tempo 1 falls from 0.71 to 0.64 mm in A and from 1.29 to
+  0.81 mm in B, and k becomes 0.87 and 0.81 in A, 0.82 and 0.76 in B.
+- What stays below 1 is the loop itself. The correction (u' = e / tau) and the servo (time constant TS = 25 ms) form a
+  second-order loop, TS tau e'' + tau e' + e = TS tau qddot: static gain TS tau (7.5e-5 s^2 for a 3 ms window, the
+  order of the measured gains), natural frequency 13 to 21 Hz and damping 0.5 sqrt(tau / TS) = 0.15 to 0.24 for the
+  frozen windows, lightly damped. That linear loop alone gives k 0.90 to 0.95 in A and 0.87 to 0.92 in B, and
+  reproduces 89 to 96 % of the noise-free tip error at the slow tempos; it has no frame hold and no quantization.
+- Readings for the next act, not results. (1) The correction must carry the servo's lag, about TS times the joint
+  speed, which exceeds 5 degrees on RJ4 and RJ6 at the published tempo. A limit stated in the units of the authority
+  fact, TS times the no-load speed (12.5 degrees for RJ4, 25 for RJ6), would not saturate. The main statement of 26
+  October lists the limiter among the design constants identical on every machine, so changing it touches the
+  portability claim; whether to restate the limiter from the authority fact is JP's decision. (2) The law's windows
+  (2 to 6 ms) are 4 to 11 times shorter than the servo's time constant, which leaves the loop lightly damped. The law
+  decides when and the stability stays with the machine, as the main statement says; the damping is the machine's
+  side of that split, now measured.
