@@ -210,3 +210,23 @@ the Omega test's tip errors): difference exactly zero.
   the spread across joints 0.10 in A and 0.013 in B, and at the engine's clip of 1.0 for 3 to 35 % of the time. One
   class for the block in the sense of the 4D field, likely inherited from the spline-planned gesture; at the edge
   where a first-order window is weakest.
+
+## The acceleration reading on held-out seeds (pre-registered A1 to A3)
+
+Script `accel_reading.py` (sha256 a1113086a5886c43ced14d95aab99779263ad16b9b39210d02076966c65232f6), pushed before its
+run (commit f2f1e77), after the exploratory pass on seeds 1 and 2; results `results/accel_reading.json`. Seeds 6 to 10,
+excerpts A and B, steady noise: 10 runs.
+
+- A1 (the planned acceleration explains the syntonic engine's joint error, median R2 at least 0.35, the PID's at most
+  half of it): **held**. Median R2 0.44 (by joint 0.35 to 0.70 in A, 0.26 to 0.58 in B); PID 0.14.
+- A2 (that part cancels at the tip like the gesture's own accelerations, within 0.10): **held**. Median gap 0.066:
+  0.29 for the error's acceleration part against 0.36 for the gesture's accelerations.
+- A3 (the syntonic engine's cancellation at least 0.2 below the PID's in every run): **held**, smallest gap 0.26
+  (0.58 to 0.71 against 0.94 to 0.98).
+- Scope: the held-out seeds change the noise draws, not the gesture; the two excerpts are those of the exploratory
+  pass. This confirms the reading over noise, not over new gestures, and it is a correlation. The causal test is to
+  change the gesture's accelerations and see the error follow: planning the gesture differently (the open test on
+  the e-geodesic).
+- What it means: the syntonic engine's joint error is largely the planned acceleration seen through the servo's
+  dynamics, and that part inherits the gesture's own kinematic cancellation at the tip; the PID's error is mostly its
+  joints' own. That is why the engine matches the tuned PID at the tip with joint errors about 28 % larger.
