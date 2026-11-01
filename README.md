@@ -11,6 +11,18 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 *MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB, CC BY-SA 4.0).*
 
+> **31 October 2026: the law knows when to speed up (simulation, pre-registered).**
+>
+> On the MAESTRO 1 joint bench (the model of `examples/servo_bench.py`, baton arm, loop at 2 kHz, 20 paired runs), each joint's servo frame was chosen live from the law: the slowest frame whose floor stays under the law's window.
+>
+> - **Timing.** The law's own frames replayed 15 s out of step (same frames, same shares, same switches) lose 12 % of baton-tip accuracy, in 20 runs of 20 (prediction T1, written before the run). The law's window tells the machine when the motion needs a faster cadence.
+> - **Along the e-geodesic.** Carried on the rate-linear path of Dual Geodesy (DOI 10.5281/zenodo.21298004) and mapped onto a 0.5 ms grid, the cadence becomes a slope instead of a staircase. It keeps its timing (11.3 % against its own schedule shifted 15 s, 20 of 20) and its efficiency (6.7 % below the fixed frames at the same frame rate; the staircase: 7.1 %). All three predictions held. The geometry gives the cadence its form, not more accuracy.
+> - **Budget.** Against today's 3 ms frame, the law's cadence cuts the tip error by 20 % at a mean 541 frames per second: 80 % of the gain of a fixed 1 ms frame, for 54 % of its frames.
+>
+> **What this is not.** The first run's main prediction failed: parity with a fixed 1 ms frame (the law's cadence stays 7.1 % above it). A diagnostic found why: 96 % of the gain of a faster frame comes from refreshing the command (plan and correction), 4 % from the window's floor, the only part the rule covers. Against one fixed frame per joint chosen from the law's own average, the timing adds 2.7 % (20 of 20). Frames under 3 ms are a simulation probe: the bench's servos accept about 330 Hz. Simulation only: one servo model, two excerpts of one piece.
+>
+> Details: [`bench/cadence_2026-10-31/NOTE.md`](bench/cadence_2026-10-31/NOTE.md).
+
 > **27 October 2026: attitude estimation at Kalman parity, with no tuning. Pending the hardware test.**
 >
 > Placed in a plain Mahony attitude filter, the window law matches a two-state (angle, gyro bias) Kalman filter, the one-axis linear form of the fusion an EKF performs:
@@ -233,7 +245,9 @@ examples/                 servo_bench.py (the table above, numpy + scipy), arm_f
 bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
                           simulation model, which is not included, but all results are), and the software bench
                           of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6f and
-                          step 7 on logged X500 data (software_2026-10-26/, self-contained, logs in data/)
+                          step 7 on logged X500 data (software_2026-10-26/, self-contained, logs in data/), and
+                          the cadence bench of 31 Oct 2026 (cadence_2026-10-31/, self-contained: the servo frame
+                          chosen live from the law, its timing control and the cadence along the e-geodesic)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 
