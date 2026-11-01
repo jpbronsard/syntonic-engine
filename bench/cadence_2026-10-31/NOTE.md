@@ -180,3 +180,33 @@ they cancel). Gate (12 joints, published seeds, syntonic and PID): difference ex
   to 0.72 (B) for the syntonic engine, 0.94 to 0.98 for the PID, under steady noise (step: 0.63 to 0.77 against 0.98
   to 1.02). The PID's joint errors reach the tip almost as independent errors; the syntonic engine's cancel by about
   a third. Why stays open.
+
+## Why the joint errors cancel: a velocity lag? (pre-registered L1 to L3)
+
+Script `lag_cancellation.py` (sha256 6c8c9ebfd4337c671dc2eadf81503060a72e6e467822f3df7c214ce3876094f6), pushed before its
+run (commit 9fb34ca); results `results/lag_cancellation.json`. Same runs as the Omega test; gate (every run reproduces
+the Omega test's tip errors): difference exactly zero.
+
+- L1 (the error's cancellation follows the gesture's, window by window: median Spearman at least 0.5, PID at least
+  0.2 lower): **failed**. Syntonic median 0.32, PID 0.16.
+- L2 (a velocity lag explains at least half of the joint error): **failed**, and clearly: median R2 0.003 (PID 0.001).
+  The error is not a lag along the planned velocity.
+- L3 (the lag part reproduces the cancellation within 0.05): **failed**, median gap 0.24.
+- Described: the gesture's own cancellation of joint velocities at the tip is 0.37 in both excerpts.
+
+## Exploratory passes after the verdict (no prediction; scripts in `exploratory/`)
+
+- Implementation check (one run): the samples align with the plan to 1e-11 rad. The error correlates with the planned
+  velocity 140 to 150 ms ahead or behind (|r| 0.42 to 0.69, the sign reversing between the two sides), the pattern
+  of an acceleration term, not of a lag; 18 to 60 % of the error's variance lies above 5 Hz.
+- `acc_explo.py` (sha256 76bfa20020de9d53..., 4 steady runs): regressed on the planned acceleration, the syntonic engine's joint
+  error has R2 0.26 to 0.69 by joint (the PID's 0.03 to 0.34). That acceleration part cancels strongly at the tip
+  (ratio 0.29 to 0.30), close to the gesture's own cancellation of joint accelerations (0.36). Reading, to be
+  pre-registered before it counts: the syntonic engine's error is largely the gesture's acceleration seen through
+  the servo's dynamics, which inherits the gesture's kinematic cancellation; the PID adds errors of each joint's own.
+  If it holds, how the gesture is planned (its accelerations) is the lever on the tip error.
+- `h_by_joint.py` (sha256 4f0b06ed978b7607..., 10 steady runs): the smoothness H the engine identifies is close across the six
+  joints, 0.95 to 0.99 by joint (excerpt A: 0.97, 0.97, 0.97, 0.99, 0.95, 0.97; B: 0.98, 0.98, 0.99, 0.99, 0.97, 0.98),
+  the spread across joints 0.10 in A and 0.013 in B, and at the engine's clip of 1.0 for 3 to 35 % of the time. One
+  class for the block in the sense of the 4D field, likely inherited from the spline-planned gesture; at the edge
+  where a first-order window is weakest.

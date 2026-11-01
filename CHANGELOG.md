@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Why the joint errors cancel at the tip (`lag_cancellation.py`, L1 to L3 pre-registered): not a velocity lag; all three fail (R2 of the lag fit 0.003). Exploratory passes after the verdict (`exploratory/`): the error carries the planned acceleration (R2 0.26 to 0.69 for the syntonic engine, 0.03 to 0.34 for the PID), whose part cancels at the tip like the gesture's own accelerations (0.29 to 0.30 against 0.36); the six joints share one smoothness, H 0.95 to 0.99. A reading to pre-register, not a result.
 - Theorem Omega on the joint bench (`bench/cadence_2026-10-31/omega_phase_rates.py`, W1 and W2 pre-registered): the six joints' phase rates co-move (W1 held, 10 of 10, the weak prediction), but their agreement does not go with the cancellation of joint errors at the tip (W2 failed: median Spearman -0.10, positive in 4 of 10, opposite signs in the two excerpts). Described: the cancellation ratio is 0.58 to 0.72 for the syntonic engine against 0.94 to 0.98 for the tuned PID under steady noise; why is open.
 
 ## 0.2.7 (31 Oct 2026)
