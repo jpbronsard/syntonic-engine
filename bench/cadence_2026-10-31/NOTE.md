@@ -230,3 +230,38 @@ excerpts A and B, steady noise: 10 runs.
 - What it means: the syntonic engine's joint error is largely the planned acceleration seen through the servo's
   dynamics, and that part inherits the gesture's own kinematic cancellation at the tip; the PID's error is mostly its
   joints' own. That is why the engine matches the tuned PID at the tip with joint errors about 28 % larger.
+
+## The causal test: re-timing the gesture (pre-registered K1 to K3)
+
+Script `plan_intervention.py` (sha256 38d4b60bb66a4075b077fbb888f5059c3b1c934477ecce04a3621038064249b6), pushed before
+its run (383f18e); results `results/plan_intervention.json`. The same path re-timed: tempo 1 (B), uniform tempos 0.7
+(U70) and 0.5 (U50), and two tempo paths from 0.5 to 1, rate linear in time (EG, the e-geodesic of the tempo, a
+reading) and period linear in time (PL). Two engines: the published adaptive window, and the same engine with its
+window frozen at its baseline mean. Seeds 11 to 15, excerpts A and B, 100 runs, 39 minutes; the gate reproduced
+omega_phase_rates.run exactly in both excerpts. k = 1 when the tip error locked to the plan scales by the tempo squared.
+
+- K1 (window frozen, slower tempos, 0.8 <= k <= 1.25): **failed**. k = 0.71 (U70) and 0.67 (U50) in A, 0.33 and 0.31
+  in B. The failure is on the side opposite to the rivals (velocity 1.43 and 2, pose 2.04 and 4): the tip error locked
+  to the plan falls faster than the tempo squared.
+- K2 (window frozen, the tempo paths): **failed**. k = 0.94 (EG) and 0.92 (PL) in A, inside the band; 0.55 and 0.54
+  in B, outside.
+- K3 (the law's trade): **held**. Window frozen, the part not locked to the plan does not move: N(U50) / N(B) = 1.01
+  (A) and 1.04 (B). Adaptive window, it falls: 0.69 and 0.77.
+- Described. With the window frozen the joints' acceleration gains do not move with the tempo (ratio to baseline, by
+  joint, median over seeds: 0.99 to 1.07 at U70 and 1.01 to 1.16 at U50 in A; 1.00 to 1.10 and 1.00 to 1.21 in B).
+  With the adaptive window they grow as the window widens (1.29 to 2.36 at U50 in A, 1.18 to 1.95 in B). Share of the
+  baseline tip mean square locked to the plan, P / (P + N): 0.76 (A) and 0.90 (B) frozen, 0.65 and 0.84 adaptive;
+  the acceleration part alone was 0.42 and 0.24 frozen at baseline on seed 1 (exploratory), so in B most of the tip
+  error locked to the plan is not the acceleration part. Tip error, median mm, arms B, U70, U50, EG, PL:
+  A adaptive 0.741, 0.506, 0.502, 0.651, 0.607; A frozen 0.817, 0.533, 0.448, 0.668, 0.632;
+  B adaptive 1.274, 0.625, 0.529, 0.670, 0.621; B frozen 1.359, 0.634, 0.512, 0.688, 0.638.
+  The adaptive window beats the frozen one in every arm except U50, in both excerpts.
+- A reading to test next, not a result: at the published tempo a joint nears its slew limit (RJ4's plan alone reaches
+  0.84 of it in A and 0.92 in B, before the correction is added), and the error of those moments vanishes once the
+  gesture slows. That would give k below 1 at both slow tempos, a stronger effect in B, the faster excerpt, and K2
+  failing in B, where the tempo paths end at tempo 1. The check is the share of time at the slew limit by arm and its
+  share of the tip error.
+- What it means. The joint error follows the acceleration with a gain that belongs to the loop (described, the
+  causal part at the joints), and the law trades noise for drift as Theorem U' says (K3). The tip error locked to the
+  plan is not only the acceleration: at the published tempo of excerpt B it is mostly a part that disappears at tempo
+  0.7. The prediction of a pure tempo-squared scaling at the tip is refuted.
