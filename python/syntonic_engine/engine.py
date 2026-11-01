@@ -87,7 +87,8 @@ class SyntonicEngine:
     snr_gate : float         a scale is used only where its structure function stands this many noise floors above it
     ema : float              averaging time of the noise and structure-function estimates (s)
     warmup : float           data collected before the window is first set (s)
-    limit : float            correction limit (rad)
+    limit : float or str     correction limit (rad); 'authority' sets it per joint to servo_tau x w0, the largest
+                             lag the servo itself can produce (data sheet values; option under test, 31 Oct 2026)
     """
 
     def __init__(self, q0, dt, frame, w0, servo_tau=0.025, floor=None, sensor_delay=1e-4, tau_max=0.5,
@@ -99,7 +100,13 @@ class SyntonicEngine:
         self.w0 = np.broadcast_to(np.asarray(w0, dtype=float), (n,)).copy()
         self.servo_tau = float(servo_tau)
         self.floor = window_floor(dt, frame, sensor_delay) if floor is None else float(floor)
-        self.tau_max, self.tau_rate, self.snr_gate, self.limit = float(tau_max), float(tau_rate), float(snr_gate), float(limit)
+        self.tau_max, self.tau_rate, self.snr_gate = float(tau_max), float(tau_rate), float(snr_gate)
+        if isinstance(limit, str):
+            if limit != 'authority':
+                raise ValueError("limit must be a number (rad) or 'authority'")
+            self.limit = self.servo_tau * self.w0
+        else:
+            self.limit = float(limit)
         if identification not in ('allan', 'raw'):
             raise ValueError("identification must be 'allan' or 'raw'")
         self.identification = identification
