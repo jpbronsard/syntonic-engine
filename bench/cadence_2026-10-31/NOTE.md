@@ -158,3 +158,25 @@ docstring quotes AD's gain as 7.2 %, from rounded values; computed exactly here 
   run, on the same efficiency line.
 - Reading: the continuous path is the same cadence as the staircase, made smooth, at the same efficiency and with the
   same knowledge of when. On this bench the geometry gives the form of the cadence, not more accuracy.
+
+## Theorem Omega on the joint bench (pre-registered W1, W2)
+
+Script `omega_phase_rates.py` (sha256 134102de76e3a15889f7bb2401fadee37c54563bbce2b94c1d9cce9ae0c11257), pushed before
+its run and before any per-joint window series was looked at (commit 315302c); results `results/omega_phase_rates.json`.
+The published bench (1 kHz, 3 ms frame, the engine with identification 'raw', and the tuned PID), baton arm. Phase rate
+of a joint: 1 / tau_law, the law's window before the floor. Cancellation ratio C over a window: |J e|^2 summed over the
+sum of the per-joint contributions |J_j e_j|^2 (1 if the contributions to the tip were uncorrelated, below 1 when
+they cancel). Gate (12 joints, published seeds, syntonic and PID): difference exactly zero.
+
+- W1, co-movement (mean pairwise correlation of the joints' log phase rates above the same statistic with the joints
+  shifted against each other, in at least 9 of 10 steady runs): **held**, 10 of 10 (0.85 to 0.87 in excerpt A, 0.97
+  in B, against -0.12 to -0.19 shifted). The weak prediction: the shared gesture alone may give it.
+- W2, the reading (more dispersion of the phase rates, less cancellation: median Spearman over the 1 s windows at
+  least 0.2, positive in at least 8 of 10 runs): **failed**. Median -0.10, positive in 4 of 10. The sign splits by
+  excerpt: -0.19 to -0.48 in A (more dispersion went with more cancellation), -0.02 to 0.24 in B. With the window's
+  tip speed partialled out (described): median -0.12. The agreement of the phase rates does not account for the
+  cancellation.
+- Described: the cancellation is real and specific to the syntonic engine. Over a run, C is 0.58 to 0.63 (A) and 0.70
+  to 0.72 (B) for the syntonic engine, 0.94 to 0.98 for the PID, under steady noise (step: 0.63 to 0.77 against 0.98
+  to 1.02). The PID's joint errors reach the tip almost as independent errors; the syntonic engine's cancel by about
+  a third. Why stays open.

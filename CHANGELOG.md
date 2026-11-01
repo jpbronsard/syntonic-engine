@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Theorem Omega on the joint bench (`bench/cadence_2026-10-31/omega_phase_rates.py`, W1 and W2 pre-registered): the six joints' phase rates co-move (W1 held, 10 of 10, the weak prediction), but their agreement does not go with the cancellation of joint errors at the tip (W2 failed: median Spearman -0.10, positive in 4 of 10, opposite signs in the two excerpts). Described: the cancellation ratio is 0.58 to 0.72 for the syntonic engine against 0.94 to 0.98 for the tuned PID under steady noise; why is open.
+
 ## 0.2.7 (31 Oct 2026)
 
 Bench and documentation only; the code is that of 0.2.0.
