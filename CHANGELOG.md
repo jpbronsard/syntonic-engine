@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `CITATION.cff`: the abstract (Zenodo's description) brought to 0.2.8. The MAESTRO 1 sentence said the engine matches a tuned PID at the baton tip; with the PID given the same correction limit it is at parity under steady noise on one excerpt, 20 % behind on the other, and 17 to 31 % ahead when the noise jumps. The authority fact now names the correction limit; the cross-language agreement reads 5e-14 rad, as in the 0.2.8 entry.
+
 ## 0.2.8 (1 Nov 2026)
 
 Engine: the correction limit is derived from the authority fact. Bench: why the joint errors cancel at the tip, the causal test, and the limit.

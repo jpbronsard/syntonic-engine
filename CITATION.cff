@@ -4,24 +4,27 @@ type: software
 title: "Syntonic Engine: one formula, three facts about the machine, no tuning"
 abstract: >-
   One formula, three facts about the machine, no tuning: the engine sets the time window of a correction or an
-  estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the
-  Syntony Principle); its only machine-specific inputs are three facts measured once: the loop timing and delay,
-  the actuator's authority in a correction loop or the fast sensor's drift in an estimator, and access to the
-  read noise. The law sets a window, not a loop gain; stability stays with the machine.
-  Implemented in Python, C++ and Rust, which agree to about 1e-14 rad. On
-  synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
-  second-order model applies; on the simulated MAESTRO 1 joint bench it matches a tuned PID at the baton tip; in a
-  simulated quadrotor attitude estimator, with the gyro's drift measured once at rest, it lands within a few percent
-  of the best fixed window under moderate changes of the vibration (it overshoots it when the vibration rises
-  x256), at parity with a tuned Kalman filter under steady vibration, and beats a fixed-noise
-  Kalman filter when the vibration rises; in simulation, on gyro drifts drawn from the laws the theory assumes, the
-  optimal exponent from nominal to x256 vibration follows 1/(2H+1) across H for a fractional drift (its gain in error
-  over the square root resolved at H = 0.9, not at 0.75), and the law's local form, fed the drift's structure
-  function measured once at rest, predicts the optimal window and its exponent through crossovers of the drift and a
-  jump of the optimum, from predictions frozen before the evaluation; on logs of a real quadrotor on the ground, the measured noise and drift
-  matrices predict that estimating roll and pitch jointly, as an EKF does, would gain under 0.5 % (RMS) over the
-  law axis by axis. The law has not yet run as an estimator on hardware. The
-  hypothesis under test is portability across machines of different physics and, for the law, the living.
+  estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony
+  Principle); its only machine-specific inputs are three facts measured once: the loop timing and delay, the
+  actuator's authority in a correction loop (which since 0.2.8 also sets the correction limit) or the fast sensor's
+  drift in an estimator, and access to the read noise. The law sets a window, not a loop gain; stability stays with
+  the machine. Implemented in Python, C++ and Rust, which agree to 5e-14 rad. On synthetic benches it is at parity
+  with hardened Bayesian Kalman banks within its class and behind them where a second-order model applies; on the
+  simulated MAESTRO 1 joint bench, against a tuned PID given the same correction limit, its baton-tip error under
+  steady noise is at parity on one excerpt and 20 % higher on the other, and 17 to 31 % lower when the noise jumps;
+  its larger joint errors cancel at the tip because they carry the gesture's planned acceleration, seen through the
+  lightly damped loop the correction forms with the servo; in a simulated quadrotor attitude estimator, with the
+  gyro's drift measured once at rest, it lands within a few percent of the best fixed window under moderate changes
+  of the vibration (it overshoots it when the vibration rises x256), at parity with a tuned Kalman filter under
+  steady vibration, and beats a fixed-noise Kalman filter when the vibration rises; in simulation, on gyro drifts
+  drawn from the laws the theory assumes, the optimal exponent from nominal to x256 vibration follows 1/(2H+1)
+  across H for a fractional drift (its gain in error over the square root resolved at H = 0.9, not at 0.75), and the
+  law's local form, fed the drift's structure function measured once at rest, predicts the optimal window and its
+  exponent through crossovers of the drift and a jump of the optimum, from predictions frozen before the evaluation;
+  on logs of a real quadrotor on the ground, the measured noise and drift matrices predict that estimating roll and
+  pitch jointly, as an EKF does, would gain under 0.5 % (RMS) over the law axis by axis. The law has not yet run as
+  an estimator on hardware. The hypothesis under test is portability across machines of different physics and, for
+  the law, the living.
 authors:
   - family-names: "Bronsard"
     given-names: "Jean-Pierre"
