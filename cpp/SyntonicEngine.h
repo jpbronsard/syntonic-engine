@@ -54,7 +54,8 @@ struct Config {
   real snr_gate = 2.0;        // a scale is used only this many noise floors above the floor
   real ema = 1.0;             // averaging time of the estimates (s)
   real warmup = 1.0;          // data collected before the window is first set (s)
-  real limit = 0.08726646259971647;   // correction limit (rad), 5 degrees
+  real limit = -1;            // correction limit (rad); negative (default since 0.2.8) = per joint servo_tau x w0,
+                              // the largest lag the servo can produce (data sheet); >= 0 = fixed (5 deg until 0.2.7)
   Identification identification = ALLAN;
   real lags[8] = {0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0, 0};   // RAW: structure-function lags (s)
   int nlags = 6;                                                     // RAW: lags used; ALLAN: finest scales fitted
@@ -97,7 +98,7 @@ class Engine {
     finest_ = c.nlags;
     aw_ = c.dt / c.ema; warm_ = lround(c.warmup / c.dt); k_ = 0; head_ = 0;
     for (int j = 0; j < N; j++) {
-      w0_[j] = w0[j]; cmd[j] = q0[j]; thm_[j] = q0[j]; thff_[j] = q0[j]; u[j] = 0;
+      w0_[j] = w0[j]; lim_[j] = c.limit >= 0 ? c.limit : c.servo_tau * w0[j]; cmd[j] = q0[j]; thm_[j] = q0[j]; thff_[j] = q0[j]; u[j] = 0;
       tau[j] = 0.5; H[j] = 0.5; tgt_[j] = 0.5; n2[j] = 0;
       for (int i = 0; i < nl_; i++) Dk_[i][j] = 0;
       for (int h = 0; h <= MAXLAG; h++) hist_[h][j] = 0;
@@ -163,7 +164,7 @@ class Engine {
         rr += clampr(1.0 / tgt_[j] - rr, -drm, drm); tau[j] = 1.0 / rr;
       }
       real g = 1.0 - exp(-dt / tau[j]);
-      u[j] = clampr(u[j] + g * e, -cfg_.limit, cfg_.limit);
+      u[j] = clampr(u[j] + g * e, -lim_[j], lim_[j]);
       if (send) cmd[j] = q[j] + u[j];
       thm_[j] += dt * clampr((cmd[j] - thm_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
       thff_[j] += dt * clampr((q[j] - thff_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
@@ -199,7 +200,7 @@ class Engine {
   }
 
   Config cfg_;
-  real dt_, floor_, aw_, w0_[N], thm_[N], thff_[N], tgt_[N], logl_[8], Dk_[8][N], hist_[MAXLAG + 1][N];
+  real dt_, floor_, aw_, w0_[N], lim_[N], thm_[N], thff_[N], tgt_[N], logl_[8], Dk_[8][N], hist_[MAXLAG + 1][N];
   real logs_[16], ablk_[16], acc_[16][N], prev_[16][N], DA_[16][N];
   long sc_[16], cnt_[16]; int nblk_[16][N]; bool hasprev_[16];
   int lag_[8], nl_, maxlag_, frame_every_, head_, nsc_, finest_;

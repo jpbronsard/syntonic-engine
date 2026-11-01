@@ -11,6 +11,16 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 *MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB, CC BY-SA 4.0).*
 
+> **1 November 2026 (0.2.8): why the joint errors cancel at the tip, and a hidden constant removed (simulation, pre-registered).**
+>
+> - **Why they cancel.** The syntonic engine's joint error is largely the planned acceleration seen through the servo. The correction (window tau) and the servo (time constant TS) form a second-order loop whose static gain is TS x tau, so the error is about TS x tau x the gesture's acceleration, and it cancels at the baton tip like the gesture's own accelerations (held on held-out seeds). Neither the agreement of the joints' phase rates (Theorem Omega) nor a velocity lag explained it; both pre-registered tests failed.
+> - **The cause, tested.** Re-timing the same gesture, the joints' acceleration gains stay fixed, but the tip error did not scale by the tempo squared as predicted (two of three lines failed): an extra part vanished as soon as the gesture slowed. The third line held, the law's trade: a slower gesture drifts less, the law widens its window and passes 23 to 31 % less noise, where a frozen window passes the same.
+> - **A hidden constant.** The extra part was the engine's 5 degree correction limit, a constant that no list declared, reached by the fast joints at the published tempo. Since 0.2.8 the limit is derived from the authority fact: the servo's time constant times its no-load speed, per joint, the largest lag the servo itself can produce. Pre-registered on fresh seeds: it never binds, and the tip error at the published tempo falls 7 to 8 % on excerpt A and 32 to 34 % on B.
+>
+> **What this is not.** The bench's PID clipped its correction at the same 5 degrees. Given the same authority clip it gains more than the syntonic engine on excerpt B, so the published comparison moves against the engine there: under steady noise the tip ratio is now x1.01 (A) and x1.21 (B), against x1.00 and x1.07 before; it stays below 1 when the noise jumps. The loop the correction forms with the servo is lightly damped (0.15 to 0.24 for the windows the law sets, 4 to 11 times shorter than the servo's 25 ms, itself an assumed value). Simulation only.
+>
+> Details: [`bench/cadence_2026-10-31/NOTE.md`](bench/cadence_2026-10-31/NOTE.md).
+
 > **31 October 2026: the law knows when to speed up (simulation, pre-registered).**
 >
 > On the MAESTRO 1 joint bench (the model of `examples/servo_bench.py`, baton arm, loop at 2 kHz, 20 paired runs), each joint's servo frame was chosen live from the law: the slowest frame whose floor stays under the law's window.
@@ -58,7 +68,7 @@ What the law does not decide is the loop gain. The window law is invariant under
 
 What is common across the substrates is the window law. Where the first-order element sits depends on the substrate: here it accumulates a correction on the setpoint of a servo that stabilises itself; on a quadrotor it belongs in the attitude estimator, as the crossover of the gyro and accelerometer fusion, and not in the rate loop, where the body integrates the command and the best window is the loop-delay floor (bench step 5). Same law, different coupling, and on each machine the facts it needs, measured once: on a servo joint, the data-sheet speed and reaction time and the encoder's read noise; on the attitude estimator, the gyro's angle random walk measured at rest, with only the accelerometer noise measured live.
 
-I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned per machine; the design constants it carries (scales, averaging time, warm-up, rate limit, gate) are the same everywhere, and the portability hypothesis stands or falls with them.
+I developed this engine for MAESTRO 1, a two-arm robot conductor I designed. It corrects each joint toward its planned motion, and the time window it uses for that correction comes from the Syntony Principle (Theorem U'). Nothing in it is tuned per machine; the design constants it carries (scales, averaging time, warm-up, rate limit, gate) are the same everywhere, and the portability hypothesis stands or falls with them. The correction limit is derived from the authority fact, the servo's time constant times its no-load speed per joint; until 0.2.7 it was a fixed 5 degrees that no list declared.
 
 Every joint controller has to decide how long to average its sensor before it corrects. Average too briefly and the joint chases sensor noise. Average too long and it falls behind the motion. A PID makes that decision through gains found by trial, one joint at a time. This engine measures what the decision depends on while the robot moves (the sensor noise, and how fast and how smoothly the motion changes) and computes the window directly:
 
@@ -98,16 +108,16 @@ The 0.1.x engine measured the residual's structure function on the raw reads at 
 
 Version 0.2.0 therefore identifies on **block means** by default (`identification='allan'`): the structure function of adjacent block means of length l, l from 2 ms to 4.096 s in powers of two. For white read noise its noise part is exactly n2 dt / l (n2 the per-read variance measured from the two reads) and is subtracted analytically; the signal part is lambda_H C(H) l^(2H) with C(H) = (2^(2H+2) - 4) / ((2H+1)(2H+2)), which is 2/3 at H = 1/2 (the Allan variance of a random walk). The fit uses the six finest scales that clear the floor, so that the scaling it measures is the local one, at the operating scale. On the software bench this lands within 7 % of the best fixed window in all 35 cells (regret at most 6.5 %), where the raw identification failed in 21 of them.
 
-The two identifications on the MAESTRO 1 joint bench (the table below, `python examples/servo_bench.py --allan` prints both):
+The two identifications on the MAESTRO 1 joint bench (the table below, `python examples/servo_bench.py --allan` prints both; 0.2.8 correction limit, `--limit5` for the 0.2.7 table):
 
 | Condition | Tip error, PID / raw / allan | Tip jitter, PID / raw / allan |
 |---|---|---|
-| A, steady noise | 0.732 / 0.734 (x1.00) / 0.749 (x1.02) | 0.651 / 0.561 (x0.86) / 0.603 (x0.93) |
-| A, noise step | 1.330 / 0.922 (x0.69) / 1.033 (x0.78) | 1.261 / 0.695 (x0.55) / 0.900 (x0.71) |
-| B, steady noise | 1.193 / 1.275 (x1.07) / 1.274 (x1.07) | 0.713 / 0.769 (x1.08) / 0.775 (x1.09) |
-| B, noise step | 1.631 / 1.450 (x0.89) / 1.487 (x0.91) | 1.284 / 0.958 (x0.75) / 1.056 (x0.82) |
+| A, steady noise | 0.676 / 0.684 (x1.01) / 0.702 (x1.04) | 0.641 / 0.547 (x0.85) / 0.592 (x0.92) |
+| A, noise step | 1.299 / 0.881 (x0.68) / 0.997 (x0.77) | 1.257 / 0.686 (x0.55) / 0.892 (x0.71) |
+| B, steady noise | 0.704 / 0.852 (x1.21) / 0.852 (x1.21) | 0.650 / 0.683 (x1.05) / 0.690 (x1.06) |
+| B, noise step | 1.314 / 1.097 (x0.83) / 1.154 (x0.88) | 1.261 / 0.898 (x0.71) / 1.004 (x0.80) |
 
-In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` reproduces the 0.1.x results bit for bit (the example and the replay tool use it for that reason). All three implementations carry both identifications, selected by `identification` in Python, `Config::identification` in C++ (`syntonic::ALLAN` or `syntonic::RAW`) and in Rust (`Identification::Allan` or `Identification::Raw`).
+In the servo regime the raw identification remains a few percent better, mostly during the noise step, because its averages react in one second at every lag while the block means of long scales need several blocks. The default is nevertheless `allan`, because it holds on any sensor; `identification='raw'` with `limit=np.radians(5.0)` reproduces the 0.1.x results bit for bit (the example uses the raw identification for that reason, and `--limit5` for the 5 degree limit). All three implementations carry both identifications, selected by `identification` in Python, `Config::identification` in C++ (`syntonic::ALLAN` or `syntonic::RAW`) and in Rust (`Identification::Allan` or `Identification::Raw`).
 
 The complete software bench (scripts with pre-registered hypotheses, SHA-256 of each script, tables, per-seed rows and the bench note) is in `bench/software_2026-10-26/`; its headline beyond the fix above: against Bayesian Kalman banks the engine is at parity in stationary and slowly drifting regimes, better after sensor-noise increases, behind after noise decreases and fast drift, and a constant-velocity Kalman beats any first-order window by 25 % on smooth targets (H >= 0.85). The engine does not notice when its class is the wrong one, because it computes its window instead of comparing candidates.
 
@@ -153,21 +163,21 @@ See `rust/README.md` for details.
 
 ## Results on the MAESTRO 1 joint bench (simulation)
 
-These results were obtained with the raw identification (`identification='raw'`, the 0.1.x engine); the example reproduces them as printed. The bench simulates the twelve arm joints of MAESTRO 1 conducting the first movement of Beethoven's Fifth. Each joint has a servo model (333 Hz command frame, 25 ms internal loop, speed derating, compliance, gear play), AS5048 encoder noise, and loads from the inverse dynamics of the planned motion. The opponent is a PID with interpolation. Its gains were picked joint by joint from a grid of 280 (P, I, D) combinations, each tried on all twelve joints over the rest of the same movement with normal noise. Both run on two held-out 30 s excerpts, once with steady noise and once with the encoder noise variance raised tenfold for 10 s. The figures below are for the baton arm and come from `examples/servo_bench.py`. A ratio below 1 means the syntonic engine did better.
+These results were obtained with the raw identification (`identification='raw'`, the 0.1.x engine) and the 0.2.8 correction limit (both engines clip their correction at the servo's time constant times its no-load speed, per joint; the PID keeps the gains tuned under its former 5 degree clip); the example reproduces them as printed, and `--limit5` reproduces the 0.2.7 table, where both clipped at 5 degrees. The bench simulates the twelve arm joints of MAESTRO 1 conducting the first movement of Beethoven's Fifth. Each joint has a servo model (333 Hz command frame, 25 ms internal loop, speed derating, compliance, gear play), AS5048 encoder noise, and loads from the inverse dynamics of the planned motion. The opponent is a PID with interpolation. Its gains were picked joint by joint from a grid of 280 (P, I, D) combinations, each tried on all twelve joints over the rest of the same movement with normal noise. Both run on two held-out 30 s excerpts, once with steady noise and once with the encoder noise variance raised tenfold for 10 s. The figures below are for the baton arm and come from `examples/servo_bench.py`. A ratio below 1 means the syntonic engine did better.
 
 | Condition | Tip error (mm), PID / syntonic | Tip jitter (mm), PID / syntonic | Joint error (deg), PID / syntonic |
 |---|---|---|---|
-| A, steady noise | 0.732 / 0.734 (x1.00) | 0.651 / 0.561 (x0.86) | 0.0309 / 0.0395 (x1.28) |
-| A, noise step | 1.330 / 0.922 (x0.69) | 1.261 / 0.695 (x0.55) | 0.0538 / 0.0475 (x0.88) |
-| B, steady noise | 1.193 / 1.275 (x1.07) | 0.713 / 0.769 (x1.08) | 0.0489 / 0.0627 (x1.28) |
-| B, noise step | 1.631 / 1.450 (x0.89) | 1.284 / 0.958 (x0.75) | 0.0674 / 0.0701 (x1.04) |
+| A, steady noise | 0.676 / 0.684 (x1.01) | 0.641 / 0.547 (x0.85) | 0.0284 / 0.0380 (x1.34) |
+| A, noise step | 1.299 / 0.881 (x0.68) | 1.257 / 0.686 (x0.55) | 0.0524 / 0.0462 (x0.88) |
+| B, steady noise | 0.704 / 0.852 (x1.21) | 0.650 / 0.683 (x1.05) | 0.0310 / 0.0501 (x1.62) |
+| B, noise step | 1.314 / 1.097 (x0.83) | 1.261 / 0.898 (x0.71) | 0.0539 / 0.0585 (x1.09) |
 
-Repeated over ten paired noise draws per condition (see `bench/`), the tip ratios are 1.006 [1.000, 1.013], 0.709 [0.697, 0.722], 1.063 [1.060, 1.066] and 0.889 [0.882, 0.897], with 95 % intervals.
+Repeated over ten paired noise draws per condition (`bench/cadence_2026-10-31/servo_bench_tenseeds.py`, seeds 101 to 110), the tip ratios are 1.009 [0.998, 1.020], 0.691 [0.682, 0.701], 1.195 [1.185, 1.205] and 0.830 [0.817, 0.843], with 95 % intervals. With the 0.2.7 limit the same draws give 1.005, 0.707, 1.061 and 0.891, as the earlier ten-draw study did on its own harness (1.006, 0.709, 1.063 and 0.889; `bench/`).
 
 What this shows:
-- The baton tip was the bench's main score, fixed before any run. There, the syntonic engine matches the tuned PID under steady noise (a tie on one excerpt, 7 % behind on the other) and does better when the noise jumps (11 % to 31 % less error). It does this with no tuning at all.
-- Scored joint by joint, the syntonic engine's error is about 28 % larger than the PID's under steady noise. That is the error the PID's gains were chosen to minimise. The syntonic engine's larger joint errors largely cancel at the tip: if they were independent, its tip error would be about 25 % higher than the PID's, and it is only 0 to 7 % higher. We do not yet know why they cancel.
-- Limits: this is one simulated servo model, and its 25 ms reaction time is an assumption that happens to match the engine's nominal model exactly. It covers two excerpts of one piece, and nothing has run on real hardware yet. Drift in the servo itself (slower response, worn gears) has not been tested.
+- The baton tip was the bench's main score, fixed before any run. There, under steady noise, the syntonic engine ties the tuned PID on excerpt A and is 21 % behind it on B (7 % with the 0.2.7 limit, which held the PID back more than the engine); it does better when the noise jumps (17 % to 32 % less error). It does this with no tuning at all.
+- Scored joint by joint, the syntonic engine's error is 34 % (A) and 62 % (B) larger than the PID's under steady noise. That is the error the PID's gains were chosen to minimise. The syntonic engine's larger joint errors largely cancel at the tip, where it is only 1 % and 21 % behind. They cancel because they carry the gesture's own acceleration, seen through the loop the correction forms with the servo, and inherit the gesture's own cancellation at the tip (`bench/cadence_2026-10-31/NOTE.md`; until 0.2.7 this read "we do not yet know why they cancel").
+- Limits: this is one simulated servo model, and its 25 ms reaction time is an assumption that happens to match the engine's nominal model exactly; the loop the correction forms with it is lightly damped (damping 0.15 to 0.24 for the windows the law sets), so a real servo's reaction time matters. It covers two excerpts of one piece, and nothing has run on real hardware yet. Drift in the servo itself (slower response, worn gears) has not been tested.
 
 The window floor was tested on its own (`bench/`, runs v8 and v9). Set to the loop delay, it lands within 0.4 % of the best floor found by sweeping, for servo frames of 2, 3, 5 and 8 ms. A window shorter than the loop delay costs accuracy, and with slow servo frames it makes the loop ring. One case is still open: with the loop itself at 333 Hz, the rule was 7 % off the best floor (see the bench note).
 
@@ -231,6 +241,7 @@ python examples/servo_bench.py                       # the results table above, 
 python rust/tools/make_replay_log.py                 # writes replay_log.bin (raw), replay_log_allan.bin and replay_w0.bin
 g++ -O2 -std=c++11 -Icpp cpp/tests/replay.cpp -o replay_cpp
 ./replay_cpp replay_log.bin replay_w0.bin raw && ./replay_cpp replay_log_allan.bin replay_w0.bin allan
+g++ -O2 -std=c++11 -Icpp cpp/tests/limit.cpp -o limit_cpp && ./limit_cpp   # the correction limit (0.2.8)
 cd rust && cargo test && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin raw \
         && cargo run --release --example replay -- ../replay_log_allan.bin ../replay_w0.bin allan
 ```
@@ -239,7 +250,7 @@ cd rust && cargo test && cargo run --release --example replay -- ../replay_log.b
 
 ```
 python/syntonic_engine/   the engine (numpy), with unit tests in python/tests/
-cpp/SyntonicEngine.h      the engine as a single C++ header (both identifications), with a replay test in cpp/tests/
+cpp/SyntonicEngine.h      the engine as a single C++ header (both identifications), with replay and limit tests in cpp/tests/
 rust/                     the engine as a no_std Rust crate, with a replay check against Python
 examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
 bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
@@ -247,7 +258,8 @@ bench/                    the MAESTRO 1 joint bench scripts and every result fil
                           of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6f and
                           step 7 on logged X500 data (software_2026-10-26/, self-contained, logs in data/), and
                           the cadence bench of 31 Oct 2026 (cadence_2026-10-31/, self-contained: the servo frame
-                          chosen live from the law, its timing control and the cadence along the e-geodesic)
+                          chosen live from the law, its timing control and the cadence along the e-geodesic; then
+                          Theorem Omega, the acceleration reading, the causal test and the correction limit)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 

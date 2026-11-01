@@ -18,7 +18,12 @@ Scores, over the 30 s, baton arm:
 The PID gains were chosen joint by joint to minimise the joint error (on the rest of the movement, clean noise), so
 the joint score is the PID's own target; the tip score is what a conductor needs.
 
-Run:  python examples/servo_bench.py          (about one minute)
+Correction limit (0.2.8): both engines clip their correction per joint at the servo's own largest lag, servo time
+constant x no-load speed (the authority fact); until 0.2.7 both clipped at a fixed 5 degrees, which RJ4 and RJ6
+reach at the published tempo (bench/cadence_2026-10-31, authority_limit.py). The PID keeps the gains tuned under the
+5 degree clip.
+
+Run:  python examples/servo_bench.py          (about one minute; --limit5 reproduces the 0.2.7 table)
 """
 import os, sys, time
 import numpy as np
@@ -33,10 +38,11 @@ DEG = np.pi / 180
 Z = np.load(os.path.join(HERE, 'data', 'maestro_excerpts.npz'))
 JN = list(Z['joints']); TAU_S = Z['stall_torque']; W0 = Z['no_load_speed']
 ENC_SD, ENC_LSB = float(Z['enc_sd_rad']), float(Z['enc_lsb_rad'])
-TS, K_INV, HB, LIM = 0.025, (1.0 * DEG) / TAU_S, 0.5 * 0.3 * DEG, 5 * DEG
+TS, K_INV, HB = 0.025, (1.0 * DEG) / TAU_S, 0.5 * 0.3 * DEG
 
 
-def run(engine, name, cond, seed):
+def run(engine, name, cond, seed, limit='authority'):
+    LIM = TS * W0 if isinstance(limit, str) else float(limit)       # the PID's clip, as the engine's
     t0 = float(Z[f'{name}_t0']); tt = np.arange(t0 - 3.0, t0 + 30.0, DT)
     q = CubicSpline(Z[f'{name}_t30'], Z[f'{name}_q30'], axis=0)(tt)
     tau = CubicSpline(Z[f'{name}_t30'], Z[f'{name}_tau30'], axis=0)(tt)
@@ -46,7 +52,7 @@ def run(engine, name, cond, seed):
     th_g = q[0].copy(); cmd = q[0].copy()
     if engine in ('syntonic', 'syntonic-allan'):
         ident = 'raw' if engine == 'syntonic' else 'allan'       # 'raw': the identification of the Oct 2026 bench
-        eng = SyntonicEngine(q[0], DT, FRAME, W0, identification=ident)   # nothing tuned; floor = loop delay / TH41-A
+        eng = SyntonicEngine(q[0], DT, FRAME, W0, identification=ident, limit=limit)   # nothing tuned; floor = loop delay / TH41-A
     else:
         kp, ki, kd = (Z[f'{name}_pid'][:, i] for i in range(3))   # gains tuned on the rest of the movement
         I = np.zeros(J); ef = np.zeros(J); efp = np.zeros(J); corr = np.zeros(J)
@@ -76,15 +82,16 @@ def run(engine, name, cond, seed):
 
 
 if __name__ == '__main__':
-    t_start = time.time()
+    t_start = time.time(); lim = np.radians(5.0) if '--limit5' in sys.argv else 'authority'
+    print('correction limit:', '5 degrees (0.2.7)' if '--limit5' in sys.argv else 'servo_tau x no-load speed per joint (0.2.8)')
     print('baton arm; ratio = syntonic / PID (below 1: syntonic better)')
     print(f'{"":26s}{"tip error (mm)":>30s}{"tip jitter (mm)":>30s}{"joint error (deg)":>32s}')
     for name in ('A', 'B'):
         for cond, seed in (('steady noise', 5), ('noise step', 7)):
-            pt, pj, pq = run('pid', name, cond, seed); st, sj, sq = run('syntonic', name, cond, seed)
+            pt, pj, pq = run('pid', name, cond, seed, lim); st, sj, sq = run('syntonic', name, cond, seed, lim)
             print(f'excerpt {name}, {cond:13s}   PID {pt:.3f}  syn {st:.3f}  x{st / pt:.3f}   PID {pj:.3f}  syn {sj:.3f}  x{sj / pj:.3f}'
                   f'   PID {pq.mean():.4f}  syn {sq.mean():.4f}  x{sq.mean() / pq.mean():.3f}', flush=True)
             if '--allan' in sys.argv:                                   # the 0.2.0 default identification, for comparison
-                at, aj, aq = run('syntonic-allan', name, cond, seed)
+                at, aj, aq = run('syntonic-allan', name, cond, seed, lim)
                 print(f'{"":26s}allan: syn {at:.3f}  x{at / pt:.3f}{"":16s}syn {aj:.3f}  x{aj / pj:.3f}{"":17s}syn {aq.mean():.4f}  x{aq.mean() / pq.mean():.3f}', flush=True)
     print(f'done in {time.time() - t_start:.0f} s')

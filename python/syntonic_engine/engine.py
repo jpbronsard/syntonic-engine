@@ -87,13 +87,14 @@ class SyntonicEngine:
     snr_gate : float         a scale is used only where its structure function stands this many noise floors above it
     ema : float              averaging time of the noise and structure-function estimates (s)
     warmup : float           data collected before the window is first set (s)
-    limit : float or str     correction limit (rad); 'authority' sets it per joint to servo_tau x w0, the largest
-                             lag the servo itself can produce (data sheet values; option under test, 31 Oct 2026)
+    limit : float or str     correction limit (rad). 'authority' (default since 0.2.8), or a negative number, sets it
+                             per joint to servo_tau x w0, the largest lag the servo itself can produce (the data
+                             sheet's values); a number >= 0 is a fixed limit (5 degrees until 0.2.7)
     """
 
     def __init__(self, q0, dt, frame, w0, servo_tau=0.025, floor=None, sensor_delay=1e-4, tau_max=0.5,
                  tau_rate=0.4, identification='allan', scales=None, lags=(0.002, 0.004, 0.008, 0.016, 0.032, 0.064),
-                 snr_gate=2.0, ema=1.0, warmup=1.0, limit=np.radians(5.0)):
+                 snr_gate=2.0, ema=1.0, warmup=1.0, limit='authority'):
         q0 = np.asarray(q0, dtype=float); n = q0.shape[0]
         self.n, self.dt = n, float(dt)
         self.frame_every = max(1, int(round(frame / dt)))
@@ -101,10 +102,10 @@ class SyntonicEngine:
         self.servo_tau = float(servo_tau)
         self.floor = window_floor(dt, frame, sensor_delay) if floor is None else float(floor)
         self.tau_max, self.tau_rate, self.snr_gate = float(tau_max), float(tau_rate), float(snr_gate)
-        if isinstance(limit, str):
-            if limit != 'authority':
-                raise ValueError("limit must be a number (rad) or 'authority'")
-            self.limit = self.servo_tau * self.w0
+        if isinstance(limit, str) and limit != 'authority':
+            raise ValueError("limit must be a number (rad) or 'authority'")
+        if isinstance(limit, str) or float(limit) < 0:
+            self.limit = self.servo_tau * self.w0                     # the authority fact: largest servo lag
         else:
             self.limit = float(limit)
         if identification not in ('allan', 'raw'):

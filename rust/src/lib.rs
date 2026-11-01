@@ -99,7 +99,8 @@ pub struct Config {
     pub ema: f64,
     /// Data collected before the window is first set (s).
     pub warmup: f64,
-    /// Correction limit (rad).
+    /// Correction limit (rad). Negative (the default since 0.2.8): per joint `servo_tau * w0`, the largest lag the
+    /// servo itself can produce, from the data sheet's values; zero or positive: a fixed limit (5 degrees until 0.2.7).
     pub limit: f64,
     /// Which identification (see the crate docs).
     pub identification: Identification,
@@ -126,7 +127,7 @@ impl Default for Config {
             snr_gate: 2.0,
             ema: 1.0,
             warmup: 1.0,
-            limit: 5.0 * core::f64::consts::PI / 180.0,
+            limit: -1.0,
             identification: Identification::Allan,
             lags: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.0, 0.0],
             nlags: 6,
@@ -154,6 +155,7 @@ pub struct Engine<const N: usize, const RING: usize = 129> {
     floor: f64,
     aw: f64,
     w0: [f64; N],
+    lim: [f64; N],
     thm: [f64; N],
     thff: [f64; N],
     tgt: [f64; N],
@@ -224,9 +226,11 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
             let b = dt * sc[i] as f64 / if cfg.ema > eight { cfg.ema } else { eight };   // at least 8 blocks
             ablk[i] = if b < 1.0 { b } else { 1.0 };
         }
+        let mut lim = [0.0; N];
+        for j in 0..N { lim[j] = if cfg.limit >= 0.0 { cfg.limit } else { cfg.servo_tau * w0[j] }; }
         Engine {
             tau: [0.5; N], h: [0.5; N], u: [0.0; N], cmd: *q0, n2: [0.0; N],
-            cfg, floor, aw: dt / cfg.ema, w0: *w0, thm: *q0, thff: *q0, tgt: [0.5; N],
+            cfg, floor, aw: dt / cfg.ema, w0: *w0, lim, thm: *q0, thff: *q0, tgt: [0.5; N],
             logl, lag, nl, maxlag: lag[nl - 1], frame_every,
             dk: [[0.0; N]; 8], hist: [[0.0; N]; RING], head: 0, k: 0,
             warm: round(cfg.warmup / dt) as u64,
@@ -347,7 +351,7 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
                 self.tau[j] = 1.0 / (rr + clamp(1.0 / self.tgt[j] - rr, -drm, drm));
             }
             let g = 1.0 - exp(-dt / self.tau[j]);
-            self.u[j] = clamp(self.u[j] + g * e, -self.cfg.limit, self.cfg.limit);
+            self.u[j] = clamp(self.u[j] + g * e, -self.lim[j], self.lim[j]);
             if send { self.cmd[j] = q[j] + self.u[j]; }
             let st = self.cfg.servo_tau;
             self.thm[j] += dt * clamp((self.cmd[j] - self.thm[j]) / st, -self.w0[j], self.w0[j]);
@@ -376,6 +380,17 @@ mod tests {
     fn allan_constant() {
         assert!((c_h(0.5) - 2.0 / 3.0).abs() < 1e-12);                                // Allan variance of a random walk
         assert!((c_h(1.0) - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn limit_from_the_authority_fact() {
+        let w0 = [5.0, 17.5];                                                          // rad/s
+        let mut eng: Engine<2> = Engine::new(&[0.0; 2], &w0, Config::default());
+        for _ in 0..2000 { eng.step(&[1.0; 2], &[0.0; 2], &[0.0; 2], None); }          // a blocked joint
+        for j in 0..2 { assert!((eng.u[j].abs() - 0.025 * w0[j]).abs() < 1e-12); }     // servo_tau x w0
+        let mut fixed: Engine<2> = Engine::new(&[0.0; 2], &w0, Config { limit: 0.1, ..Config::default() });
+        for _ in 0..2000 { fixed.step(&[1.0; 2], &[0.0; 2], &[0.0; 2], None); }
+        for j in 0..2 { assert!((fixed.u[j].abs() - 0.1).abs() < 1e-12); }
     }
 
     #[test]

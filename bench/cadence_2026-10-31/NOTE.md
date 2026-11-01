@@ -316,3 +316,24 @@ on the same seeds; the gate reproduced plan_intervention.run exactly.
 - What it means. The limiter stated from the authority fact removes the extra tip error at the published tempo,
   changes nothing elsewhere, and fits no number. Adopting it as the default (Python and Rust, the published bench
   re-run, the README's numbers, the main statement's list of design constants) is JP's decision.
+
+## 0.2.8: the authority limit adopted, the published bench re-run
+
+JP adopted the limit from the authority fact as the engine's default (1 Nov 2026). It is the default in the Python,
+Rust and C++ engines (servo_tau x w0 per joint; a number of zero or more still sets a fixed limit); each has a test
+that a blocked joint's correction stops at that limit, and the cross-language replays agree to 5e-14 rad.
+
+- A correction to an earlier reading in this note. The section after the causal test said the main statement of 26
+  October lists the limiter among its design constants. It does not: its "limiteur" (scales, averaging time,
+  warm-up, rate limit, gate) is the window's rate limit, 0.4 s/s. The 5 degree correction limit was in no list: an
+  undeclared constant, which 0.2.8 removes by deriving it from the authority fact. The same wording in the header of
+  `authority_limit.py` (pre-registered, left as it is) carries the same error.
+- The published bench (`examples/servo_bench.py`) now gives the PID the same authority clip, with its gains tuned
+  under the old one; `--limit5` reproduces the 0.2.7 table exactly. The PID gains more than the syntonic engine on
+  excerpt B. Over ten paired draws per condition (`servo_bench_tenseeds.py`, seeds 101 to 110, a description), tip
+  ratio syntonic / PID with 95 % intervals: A steady 1.009 [0.998, 1.020], A step 0.691 [0.682, 0.701], B steady 1.195
+  [1.185, 1.205], B step 0.830 [0.817, 0.843]. With the 0.2.7 limit the same draws give 1.005, 0.707, 1.061 and
+  0.891, matching the earlier ten-draw study (1.006, 0.709, 1.063, 0.889). Joint error ratio under steady noise: 1.33
+  (A) and 1.60 (B), against 1.28 and 1.27 with 0.2.7.
+- Reproducing this folder: the scripts up to `authority_limit.py` ran with the 5 degree default of 0.2.7; with the
+  0.2.8 default their gates fail and their numbers change. Check out commit 23ea17f to rerun them.

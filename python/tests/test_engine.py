@@ -23,11 +23,11 @@ class Formulas(unittest.TestCase):
 
 
 class Engine(unittest.TestCase):
-    def run_engine(self, seconds=3.0, noise=1e-3, seed=0, identification='allan'):
+    def run_engine(self, seconds=3.0, noise=1e-3, seed=0, identification='allan', limit='authority'):
         rng = np.random.default_rng(seed); dt = 0.001; n = 3
         t = np.arange(0.0, seconds, dt)
         q = np.stack([0.3 * np.sin(2 * np.pi * f * t) for f in (0.5, 1.0, 2.0)], 1)
-        eng = SyntonicEngine(q[0], dt, 0.003, w0=np.full(n, 10.0), identification=identification)
+        eng = SyntonicEngine(q[0], dt, 0.003, w0=np.full(n, 10.0), identification=identification, limit=limit)
         th = q[0].copy(); cmds = []
         for k in range(len(t)):
             a = th + rng.normal(0, noise, n); b = th + rng.normal(0, noise, n)
@@ -55,8 +55,9 @@ class Engine(unittest.TestCase):
         self.assertFalse(np.array_equal(c2, c3))
 
     def test_raw_identification_is_the_0_1_x_engine(self):
-        # reference values computed with syntonic-engine 0.1.1 before the 0.2.0 change (same harness, seed 0)
-        eng, cmds, _, _ = self.run_engine(identification='raw')
+        # reference values computed with syntonic-engine 0.1.1 before the 0.2.0 change (same harness, seed 0);
+        # 0.1.x clipped the correction at a fixed 5 degrees
+        eng, cmds, _, _ = self.run_engine(identification='raw', limit=np.radians(5.0))
         self.assertAlmostEqual(float(cmds.sum()), 187.66031755510681, places=9)
         np.testing.assert_allclose(eng.tau, [0.0035389, 0.00222222, 0.00222222], rtol=1e-4)
         np.testing.assert_allclose(eng.H, [1.0, 1.0, 0.99764172], rtol=1e-4)
@@ -117,6 +118,16 @@ class Identification(unittest.TestCase):
         Hn, tau_hat = self.identify(0.5, 0.005, 'raw')                        # fine encoder regime: raw is right
         self.assertTrue(0.005 / 1.5 < tau_hat < 0.005 * 1.5, tau_hat)
         self.assertGreater(Hn, 0.3)
+
+
+    def test_limit_from_the_authority_fact(self):
+        eng = SyntonicEngine(np.zeros(3), 0.001, 0.003, w0=np.array([5.0, 8.7, 17.5]), servo_tau=0.025)
+        np.testing.assert_allclose(eng.limit, [0.125, 0.2175, 0.4375])                 # servo_tau x w0 (rad)
+        fixed = SyntonicEngine(np.zeros(3), 0.001, 0.003, w0=np.full(3, 10.0), limit=np.radians(5.0))
+        self.assertAlmostEqual(float(fixed.limit), np.radians(5.0))
+        for _ in range(2000):                                                       # a blocked joint: the correction stops at its limit
+            eng.step(np.full(3, 1.0), np.zeros(3), np.zeros(3))
+        np.testing.assert_allclose(np.abs(eng.u), eng.limit)
 
 
 if __name__ == '__main__':
