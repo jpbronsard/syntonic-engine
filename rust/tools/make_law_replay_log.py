@@ -9,6 +9,8 @@ what each law was given and what it computed. Written to the current folder, lit
                                 6 joints, excerpt A, development seed 91, encoder noise x10 from 10 to 20 s, servo delay
                                 2.5 ms, i.e. a fractional delay line), 33 s
   replay_loop_bench_spread.bin  the same bench with the C++/Rust option spread = 400 (reference: SpreadLoopLaw below)
+  replay_loop_bench2.bin        (0.3.2) the same bench and seed with a law of two joints, RJ5 and RJ6 (as on a
+                                two-axis bench), the other four joints run by a second law that is not recorded
   replay_loop_two.bin           two joints (as on the ARM-1 bench), a closed loop of a 25 ms servo with 2 ms of delay
                                 (whole ticks), a fixed lead of 20 ms, a disturbance step and a read-noise step, 12 s
   replay_loop_one.bin           one joint, the same closed loop, 8 s (one joint sums the fit's terms in another order)
@@ -130,6 +132,23 @@ def loop_bench(spread):
     write_loop(name, made['rec'], made['q0'], made['w0'], RB.DT, RB.FRAME, RB.TS_NOM, dead, None, spread)
 
 
+def loop_bench2():
+    """0.3.2: a two-joint law (RJ5, RJ6) on the realistic bench, the other joints by a second law, not recorded"""
+    os.environ.setdefault('SYNTONIC_REPO', ROOT)
+    sys.path.insert(0, os.path.join(ROOT, 'bench', 'goal_2026-11-02', 'servo', 'bench'))
+    import realistic_bench as RB
+    dead = 0.0025; made = {}; kw = dict(dt=RB.DT, frame=RB.FRAME, servo_tau=RB.TS_NOM, dead=dead)
+
+    def factory(q0, w0):
+        made['rec'] = LoopRecorder(SyntonicLoopLaw(q0, w0, **kw)); made['q0'] = q0.copy(); made['w0'] = w0.copy()
+        return made['rec']
+
+    RB.simulate_columns('A', dict(dead_time=dead, noise='step'), 91,
+                        [('LAW2', factory, [4, 5]), ('LAW4', lambda q0, w0: SyntonicLoopLaw(q0, w0, **kw), [0, 1, 2, 3])],
+                        n_joints=6, tip_score=False)
+    write_loop('replay_loop_bench2.bin', made['rec'], made['q0'], made['w0'], RB.DT, RB.FRAME, RB.TS_NOM, dead, None, 0)
+
+
 def loop_closed(n, seconds, fname, seed):
     """a closed loop as in python/tests/test_loop_law.py: first-order 25 ms servo with a speed limit, 2 ms of delay,
     an output disturbance (random walk + a 0.01 rad step at 1.5 s), two noisy reads per tick, read noise x10 from
@@ -236,6 +255,7 @@ def att_bench(fname='replay_att_bench.bin', seed=300, circ='C5'):
 if __name__ == '__main__':
     loop_bench(0)
     loop_bench(SPREAD)
+    loop_bench2()
     loop_closed(2, 12.0, 'replay_loop_two.bin', seed=7)
     loop_closed(1, 8.0, 'replay_loop_one.bin', seed=8)
     att_synth()

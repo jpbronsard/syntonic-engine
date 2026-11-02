@@ -1,0 +1,134 @@
+[
+ {
+  "log": "replay_loop_bench2.bin",
+  "joints": 2,
+  "robust": 878,
+  "recomputations": 63,
+  "s2_rel_diff": 1.3322676295501878e-15,
+  "plain": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 9.594216040393813e-06
+  },
+  "prune": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.3921364091067963,
+   "share_max": 0.514958238420653
+  },
+  "quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 9.594216040515518e-06
+  },
+  "prune+quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.3921364091067963,
+   "share_max": 0.514958238420653
+  }
+ },
+ {
+  "log": "replay_loop_two.bin",
+  "joints": 2,
+  "robust": 935,
+  "recomputations": 21,
+  "s2_rel_diff": 1.6653345369377348e-15,
+  "plain": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 3.5385713006240705e-06
+  },
+  "prune": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.5781970970206265,
+   "share_max": 0.9404991087344029
+  },
+  "quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 3.5385713008001276e-06
+  },
+  "prune+quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.5781970970206265,
+   "share_max": 0.9404991087344029
+  }
+ },
+ {
+  "log": "replay_loop_one.bin",
+  "joints": 1,
+  "robust": 935,
+  "recomputations": 13,
+  "s2_rel_diff": 1.6653345369377348e-15,
+  "plain": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 1.2755052339662736e-05
+  },
+  "prune": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.6362676539147126,
+   "share_max": 0.866951871657754
+  },
+  "quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 1.2755052339811642e-05
+  },
+  "prune+quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.6362676539147126,
+   "share_max": 0.866951871657754
+  }
+ },
+ {
+  "log": "replay_loop_bench.bin",
+  "joints": 6,
+  "robust": 878,
+  "recomputations": 63,
+  "s2_rel_diff": 1.3322676295501878e-15,
+  "plain": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 9.594216040393813e-06
+  },
+  "prune": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.47450615275216645,
+   "share_max": 0.6714502657555049
+  },
+  "quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 1.0,
+   "share_max": 1.0,
+   "min_margin": 9.594216040515518e-06
+  },
+  "prune+quad": {
+   "differ": 0,
+   "fallbacks": 0,
+   "share_mean": 0.47450615275216645,
+   "share_max": 0.6714502657555049
+  }
+ }
+]

@@ -5,7 +5,8 @@
 # The law replays on an emulated Cortex-M7 (0.3.1): builds qemu_replay.cpp with arm-none-eabi-g++ and newlib for the
 # Teensy 4.x core (-O2 -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard), twice: with -ffp-contract=off (the PC's
 # arithmetic) and with GCC's default for the gnu++ dialects (fused multiply-adds), and runs both on QEMU's mps2-an500
-# board with semihosting. QEMU checks the arithmetic (IEEE double, newlib's libm), not the timing.
+# board with semihosting. QEMU checks the arithmetic (IEEE double, newlib's libm), not the timing. Since 0.3.2 the law
+# runs with the speed-ups of its gain recomputation on (its defaults), and the two-joint log is replayed too.
 # Needs arm-none-eabi-g++ with newlib (Ubuntu: gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib)
 # and qemu-system-arm. Run from the folder that holds the logs of rust/tools/make_law_replay_log.py:
 #   sh bench/port_2026-11-02/m7/run_qemu.sh
