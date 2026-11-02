@@ -10,6 +10,6 @@ from .loop_law import SyntonicLoopLaw
 from .attitude_law import RiccatiAttitudeLaw
 from .loop_scan import ScanLoopLaw
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 __all__ = ['SyntonicEngine', 'kappa_H', 'C_H', 'loop_delay', 'window_floor', 'SyntonicLoopLaw', 'RiccatiAttitudeLaw',
            'ScanLoopLaw']

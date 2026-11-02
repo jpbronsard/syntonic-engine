@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+## 0.3.2 (2 Nov 2026)
+
+The loop law's gain recomputation made cheaper in C++ and Rust in two ways that leave the chosen gains unchanged, with their Python reference. The gains, and so the commands, are those of 0.3.0 and 0.3.1 at every recomputation. The engine and the attitude law are unchanged. Not yet run on a microcontroller.
+
+- **Two speed-ups of the gain recomputation** (C++ and Rust `LoopLawConfig::prune` and `quad`, both on by default; Python `ScanLoopLaw`, opt-in).
+  - **Pruning.** Every term of a candidate's predicted loop error J is positive, so its partial sum never decreases, in floating point as in exact arithmetic. The candidates in use are evaluated first. Every 50 frequencies a candidate is dropped once its partial J exceeds, for every joint, the smaller of their J and the best J so far, times 1 + delta: it cannot be chosen.
+  - **The quadratic form.** |1 + L|^2 = 1 + 2 Kp Re G + Kp^2 |G|^2 + 2 Ki Im G / W + Ki^2 |G|^2 / W^2, a quadratic in Ki with one coefficient per Kp row and frequency (P, filled as the row's first candidate reaches each block) and two per frequency (Q, R). |S|^2 then costs four operations and a division instead of ten and a division. It differs from |S|^2 computed from L by rounding only: at most 1.7e-15 relative on the replays' grids, and for any robust candidate (|1 + L| >= 1/2, |G| <= 1) at most about 1e-13, so about 5e-13 on J.
+  - **Certificate and fallback.** A choice made with the quadratic form is kept when the next J exceeds the best by more than delta = 1e-9 in relative terms (`LoopLawConfig::delta`, a declared constant, at least 1e-10; a larger value costs time and never changes the gains). Pruning never drops a candidate within delta of the best, so the next J is known. Otherwise the scan is done again from L, exactly as in 0.3.1, and counted (`fallbacks()`). A NaN in the spectrum or the noise turns both speed-ups off for that recomputation.
+  - **Python.** `python/syntonic_engine/loop_scan.py`: `ScanLoopLaw` is the loop law with its gains found by the scan of the C++ and Rust laws, with their arithmetic; its fallback is the frozen law's own matrix product. `loop_law.py`, the frozen law, is unchanged.
+- **The same gains** (`bench/scan_2026-11-02/`).
+  - **Replays in C++ and Rust** (`cpp/tests/replay_laws.cpp`, `rust/examples/replay_laws.rs`). Every loop log of `rust/tools/make_law_replay_log.py`, now with a two-joint log of the realistic bench (RJ5 and RJ6, `replay_loop_bench2.bin`), is replayed five times: the speed-ups off, each one alone, both, and both with delta = 1e3, which makes every choice fall back. The gains are Python's at every tick in all five. There is no fallback in the first four. On every log the C++ and Rust laws evaluate exactly as many points as the Python reference.
+  - **Python** (`scan_check.py`). At every recomputation of the logs, the scan chooses the candidate the Python law chose, in all four combinations, with no fallback.
+  - **The gate** (`bench/goal_2026-11-02/package_gate.py servo --scan`). `ScanLoopLaw` in the frozen harness reproduces the recorded run 'C1 A 71' exactly (difference 0.0), with 47 % of the points evaluated and no fallback.
+  - **On an emulated Cortex-M7** (`bench/port_2026-11-02/m7/run_qemu.sh`, now with the speed-ups on and the two-joint log): the same gains as Python at every tick, with `-ffp-contract=off` and with GCC's fused default, the same points evaluated, no fallback.
+  - **The closest tie.** At every recomputation of the replays the best J was below the next by at least 3.5e-6 in relative terms (from L and by the quadratic form alike), 3500 times delta.
+- **Cost.**
+  - **On our PC** (Xeon, g++ -O2, one core, the shortest of 5 replays per recomputation; `pc_timing.sh`). Two joints on the realistic bench (878 robust candidates): a recomputation took 4.2 ms in 0.3.1 and 0.84 ms in 0.3.2 (1.07 ms at most); pruning alone 1.1 ms, the quadratic form alone 1.9 ms. Six joints: 6.9 ms, then 2.4 ms.
+  - **On a Teensy 4.1** (LLVM's Cortex-M7 model, 600 MHz; `m7/cycle_model.sh`, `cost_model.py`). A point costs 97 cycles from L (0.3.1, reproduced) and 70 by the quadratic form; filling P costs 42 cycles a frequency. Two joints with 878 robust candidates: a recomputation takes 0.215 s in 0.3.1; in 0.3.2, 0.160 s if nothing is pruned, 0.066 s on average and 0.085 s at most on the two-joint log. With 1246 candidates (no servo delay): 0.305, 0.225, 0.092 and 0.119 s. Assumed, as in 0.3.1: newlib's pow at 500 cycles.
+  - **What pruning saves varies.** On average it evaluated 39 % of the points on the two-joint log, 47 % on the six-joint bench and 58 to 64 % on the closed loops. In single recomputations it evaluated up to 52 %, 67 % and 94 % (a closed loop with a disturbance step, where the two joints want very different gains). A per-tick budget therefore cannot count on it: with `spread` the work is divided as if nothing were pruned, and pruning only ends it early.
+  - **The spread a per-tick budget needs** (two joints, 878 candidates; the law's own rule, `spread_for`). To stay within 0.45 ms of every 1 ms tick: 365 (0.3.1 needed 499 for about 0.45 ms). No spread below 500 stays within 0.25 ms. With 1246 candidates no spread below 500 stays within 0.45 ms either.
+  - **What that spread costs** (`spread_budget.py`, as in 0.3.1: the realistic bench, development seeds 91-93, excerpts A and B, paired; described, not pre-registered). The tip error ratio to `spread = 0` at 365 is 1.025 at nominal and 1.033 under the noise step, worse in 6 of 6 each (0.3.1 at 499: 1.037 and 1.048).
+  - **Not implemented: counting on pruning.** At the largest share seen on the two-joint log (51.5 %), the spreads would be 188 for 0.45 ms and 344 for 0.25 ms (ratios 1.006 and 1.010 at 188; 1.022 and 1.030 at 344). That would need a schedule that applies the gains later when pruning is poor, so their delay would depend on the data.
+- **Scheduling helpers** (C++ and Rust, opt-in).
+  - `time_candidate(clock, hz)` times one candidate on the board by the caller's clock (on a Teensy, the cycle counter).
+  - `spread_for(seconds, budget)` gives the smallest spread for a declared time per tick, counted as above.
+  - `set_spread(m)` changes the spread between recomputations.
+  - Together they derive the spread from a measured cost and a declared budget: a scheduling choice, not a tuned parameter.
+  - Also `points_evaluated()`, `points_total()`, `fallbacks()`, `late()` (a recomputation not finished before its last tick; only after a fallback) and `tie_margin()`.
+- **Memory.** About 125 KB + 13 KB per joint, 150 KB for two joints (0.3.1: 114 KB): the quadratic form's per-frequency constants and one row of P.
+- **Teensy.** `examples/teensy/LoopLawTiming.ino` prints on the board: the cycles of a recomputation with each speed-up off and on, and the points each evaluated; the time of one candidate and the spreads for 0.45 and 0.25 ms; the longest tick at the first. It sets `-ffp-contract=off` for the law itself (`#pragma GCC optimize`). Compiled for Cortex-M7 against stand-ins, not run.
+- **Tests.** Python `test_loop_scan.py`: `ScanLoopLaw` against `SyntonicLoopLaw` bit for bit in every combination and with the fallback forced. C++ `laws.cpp` and `cargo test` (3 new): the same commands at every tick with the speed-ups off, on and forced to fall back; `delta` checked; the scheduling helpers.
+- **Docs.** README: a note at the top, the C++ and Rust sections, the checks, the listing. `rust/README.md`, `bench/README.md` (`scan_2026-11-02/`). CITATION.cff: a sentence in the abstract.
+- **Version strings 0.3.2** in the Python package, the Rust crate and CITATION.cff.
+
 ## 0.3.1 (2 Nov 2026)
 
 The two laws of 0.3.0 ported from Python to C++ and Rust, with the same facts and the same arithmetic, and checked against Python on replays. Nothing in the laws changed; the engine is unchanged in all three languages. Not yet run on a microcontroller.
