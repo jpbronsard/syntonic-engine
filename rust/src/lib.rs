@@ -20,6 +20,11 @@
 //! engine, bit for bit), the structure function of the raw residual at lags of 2 to 64 ms, valid where the motion
 //! over 64 ms is far above the read noise, as on the MAESTRO 1 joint bench.
 //!
+//! Two options, off by default (since 0.2.9; with both off the engine is that of 0.2.8, bit for bit):
+//! `Config::lead`, a servo lead on the planned velocity (feed-forward, use `Engine::step_lead`), and
+//! `Config::travel`, how the window travels toward the law's target (`Travel::E`: 1/tau relaxes exponentially,
+//! the e-geodesic of Dual Geodesy). See the Python module docstring for what each did on the MAESTRO 1 bench.
+//!
 //! The crate is `no_std` and allocation-free (math from `libm`), so it runs on microcontrollers as well as on a PC.
 //!
 //! ```
@@ -75,6 +80,16 @@ pub enum Identification {
     Raw,
 }
 
+/// How the window travels toward the law's target (since 0.2.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Travel {
+    /// 1/tau stepped toward 1/tau_target, at most `tau_rate` seconds per second (the published travel, default).
+    Rate,
+    /// theta = 1/tau relaxes exponentially toward 1/tau_target with time constant `travel_t` (the e-geodesic);
+    /// the window takes the target at the first fit; `tau_rate` is unused.
+    E,
+}
+
 /// Hardware facts and fixed design constants. Only `dt`, `frame` and `servo_tau` describe your hardware;
 /// the rest are the declared defaults of the engine and are not meant to be tuned.
 #[derive(Clone, Copy, Debug)]
@@ -112,6 +127,14 @@ pub struct Config {
     pub scales: [f64; 16],
     /// `Allan`: number of block lengths used.
     pub nscales: usize,
+    /// Servo lead (s), off by default (0, since 0.2.9). Negative: `servo_tau + loop_delay(dt, frame, sensor_delay)`,
+    /// the servo's lag plus the read-to-action delay; positive: a fixed lead. When on, call `step_lead` with the
+    /// planned velocity; the engine's servo and plan models see the same lead.
+    pub lead: f64,
+    /// How the window travels toward the law's target (since 0.2.9).
+    pub travel: Travel,
+    /// `Travel::E`: relaxation time constant (s); `None` = the longest of the `lags` used, 64 ms by default.
+    pub travel_t: Option<f64>,
 }
 
 impl Default for Config {
@@ -134,6 +157,9 @@ impl Default for Config {
             scales: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128, 0.256, 0.512, 1.024, 2.048, 4.096,
                      0.0, 0.0, 0.0, 0.0],
             nscales: 12,
+            lead: 0.0,
+            travel: Travel::Rate,
+            travel_t: None,
         }
     }
 }
@@ -181,6 +207,10 @@ pub struct Engine<const N: usize, const RING: usize = 129> {
     da: [[f64; N]; 16],
     nblk: [[u32; N]; 16],
     finest: usize,
+    // options (0.2.9)
+    lead: f64,
+    a_e: f64,
+    started: bool,
 }
 
 impl<const N: usize, const RING: usize> Engine<N, RING> {
@@ -228,6 +258,12 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
         }
         let mut lim = [0.0; N];
         for j in 0..N { lim[j] = if cfg.limit >= 0.0 { cfg.limit } else { cfg.servo_tau * w0[j] }; }
+        let lead = if cfg.lead < 0.0 { cfg.servo_tau + loop_delay(dt, cfg.frame, cfg.sensor_delay) } else { cfg.lead };
+        let travel_t = match cfg.travel_t {
+            Some(t) => t,
+            None => cfg.lags[..cfg.nlags.min(8)].iter().fold(0.0f64, |m, &x| if x > m { x } else { m }),
+        };
+        assert!(travel_t > 0.0, "travel_t must be positive");
         Engine {
             tau: [0.5; N], h: [0.5; N], u: [0.0; N], cmd: *q0, n2: [0.0; N],
             cfg, floor, aw: dt / cfg.ema, w0: *w0, lim, thm: *q0, thff: *q0, tgt: [0.5; N],
@@ -237,6 +273,7 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
             sc, nsc, logs, ablk, cnt: [0; 16], hasprev: [false; 16],
             acc: [[0.0; N]; 16], prev: [[0.0; N]; 16], da: [[0.0; N]; 16], nblk: [[0; N]; 16],
             finest: cfg.nlags,
+            lead, a_e: dt / travel_t, started: false,
         }
     }
 
@@ -281,9 +318,21 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
     /// One loop tick. `q`: planned angles now (rad); `a`, `b`: two independent reads of every encoder (rad);
     /// `frame`: `Some(true)` when a servo frame is sent now, `Some(false)` when not, `None` to count frames
     /// internally (one every frame period, starting with the first tick). Returns the command to send (rad).
-    #[allow(clippy::manual_is_multiple_of)]
+    /// Panics if the lead is on: use `step_lead`.
     pub fn step(&mut self, q: &[f64; N], a: &[f64; N], b: &[f64; N], frame: Option<bool>) -> &[f64; N] {
+        assert!(self.lead == 0.0, "the lead needs step_lead with the planned velocity");
+        self.tick(q, None, a, b, frame)
+    }
+
+    /// One loop tick with the servo lead (since 0.2.9): as `step`, with `qd` the planned velocities now (rad/s).
+    pub fn step_lead(&mut self, q: &[f64; N], qd: &[f64; N], a: &[f64; N], b: &[f64; N], frame: Option<bool>) -> &[f64; N] {
+        self.tick(q, Some(qd), a, b, frame)
+    }
+
+    #[allow(clippy::manual_is_multiple_of)]
+    fn tick(&mut self, q: &[f64; N], qd: Option<&[f64; N]>, a: &[f64; N], b: &[f64; N], frame: Option<bool>) -> &[f64; N] {
         let dt = self.cfg.dt;
+        let first = !self.started;
         let raw = self.cfg.identification == Identification::Raw;
         if raw { self.head = (self.head + 1) % RING; }
         let send = match frame { Some(f) => f, None => self.k % self.frame_every == 0 };
@@ -347,16 +396,31 @@ impl<const N: usize, const RING: usize> Engine<N, RING> {
                 let ts = clamp(ts, self.floor, self.cfg.tau_max);
                 if nok >= 2 { self.tgt[j] = ts; self.h[j] = hn; }
                 let rr = 1.0 / self.tau[j];
-                let drm = self.cfg.tau_rate * dt / (self.tau[j] * self.tau[j]);
-                self.tau[j] = 1.0 / (rr + clamp(1.0 / self.tgt[j] - rr, -drm, drm));
+                if self.cfg.travel == Travel::E {                                  // theta = 1/tau relaxes (e-geodesic)
+                    self.tau[j] = if first { self.tgt[j] } else { 1.0 / (rr + self.a_e * (1.0 / self.tgt[j] - rr)) };
+                } else {
+                    let drm = self.cfg.tau_rate * dt / (self.tau[j] * self.tau[j]);
+                    self.tau[j] = 1.0 / (rr + clamp(1.0 / self.tgt[j] - rr, -drm, drm));
+                }
             }
             let g = 1.0 - exp(-dt / self.tau[j]);
             self.u[j] = clamp(self.u[j] + g * e, -self.lim[j], self.lim[j]);
-            if send { self.cmd[j] = q[j] + self.u[j]; }
             let st = self.cfg.servo_tau;
-            self.thm[j] += dt * clamp((self.cmd[j] - self.thm[j]) / st, -self.w0[j], self.w0[j]);
-            self.thff[j] += dt * clamp((q[j] - self.thff[j]) / st, -self.w0[j], self.w0[j]);
+            match qd {
+                Some(v) if self.lead != 0.0 => {                                   // servo lead on the planned velocity
+                    let ld = self.lead * v[j];
+                    if send { self.cmd[j] = q[j] + ld + self.u[j]; }
+                    self.thm[j] += dt * clamp((self.cmd[j] - self.thm[j]) / st, -self.w0[j], self.w0[j]);
+                    self.thff[j] += dt * clamp((q[j] + ld - self.thff[j]) / st, -self.w0[j], self.w0[j]);
+                }
+                _ => {
+                    if send { self.cmd[j] = q[j] + self.u[j]; }
+                    self.thm[j] += dt * clamp((self.cmd[j] - self.thm[j]) / st, -self.w0[j], self.w0[j]);
+                    self.thff[j] += dt * clamp((q[j] - self.thff[j]) / st, -self.w0[j], self.w0[j]);
+                }
+            }
         }
+        if self.k > self.warm { self.started = true; }
         if !raw {
             for (i, &dn) in done.iter().enumerate().take(self.nsc) { if dn { self.cnt[i] = 0; self.hasprev[i] = true; } }
         }
@@ -391,6 +455,55 @@ mod tests {
         let mut fixed: Engine<2> = Engine::new(&[0.0; 2], &w0, Config { limit: 0.1, ..Config::default() });
         for _ in 0..2000 { fixed.step(&[1.0; 2], &[0.0; 2], &[0.0; 2], None); }
         for j in 0..2 { assert!((fixed.u[j].abs() - 0.1).abs() < 1e-12); }
+    }
+
+    #[test]
+    fn options_off_by_default() {
+        let c = Config::default();
+        assert_eq!(c.lead, 0.0);
+        assert_eq!(c.travel, Travel::Rate);
+        assert!(c.travel_t.is_none());
+    }
+
+    #[test]
+    fn lead_adds_the_planned_velocity() {
+        // a joint held exactly on its plan: the correction stays zero and the command is plan + lead x velocity
+        let cfg = Config { lead: -1.0, ..Config::default() };
+        let coef = 0.025 + loop_delay(0.001, 0.003, 1e-4);                             // servo_tau + read-to-action delay
+        let mut eng: Engine<1> = Engine::new(&[0.0], &[10.0], cfg);
+        let cmd = eng.step_lead(&[0.2], &[0.5], &[0.2], &[0.2], None)[0];
+        assert!((cmd - (0.2 + coef * 0.5)).abs() < 1e-15);
+        let mut fixed: Engine<1> = Engine::new(&[0.0], &[10.0], Config { lead: 0.01, ..Config::default() });
+        assert!((fixed.step_lead(&[0.2], &[0.5], &[0.2], &[0.2], None)[0] - 0.205).abs() < 1e-15);
+    }
+
+    #[test]
+    #[should_panic]
+    fn lead_needs_step_lead() {
+        let mut eng: Engine<1> = Engine::new(&[0.0], &[10.0], Config { lead: -1.0, ..Config::default() });
+        eng.step(&[0.0], &[0.0], &[0.0], None);
+    }
+
+    #[test]
+    fn e_travel_relaxes_in_one_over_tau() {
+        // the first fit sets the window to the target; afterwards 1/tau relaxes toward 1/target with 64 ms
+        let cfg = Config { travel: Travel::E, identification: Identification::Raw, ..Config::default() };
+        let mut eng: Engine<1> = Engine::new(&[0.0], &[10.0], cfg);
+        let a_e = 0.001 / 0.064;
+        let mut checked = 0;
+        for k in 0..3000u32 {
+            let x = 0.3 * libm::sin(k as f64 * 0.004);
+            let n = if k % 2 == 0 { 1e-4 } else { -1e-4 };
+            let (was_started, old) = (eng.started, eng.tau[0]);
+            eng.step(&[x], &[x + n], &[x - n], None);
+            if eng.started && !was_started { assert_eq!(eng.tau[0], eng.tgt[0]); }
+            if was_started {
+                let want = 1.0 / old + a_e * (1.0 / eng.tgt[0] - 1.0 / old);
+                assert!((1.0 / eng.tau[0] - want).abs() <= 1e-9 * want);
+                checked += 1;
+            }
+        }
+        assert!(checked > 1000);
     }
 
     #[test]

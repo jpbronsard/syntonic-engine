@@ -130,5 +130,47 @@ class Identification(unittest.TestCase):
         np.testing.assert_allclose(np.abs(eng.u), eng.limit)
 
 
+class Options(unittest.TestCase):
+    """The two options of 0.2.9, off by default: the servo lead and the e travel of the window."""
+
+    def test_off_by_default(self):
+        eng = SyntonicEngine(np.zeros(2), 0.001, 0.003, w0=10.0)
+        self.assertEqual(eng.lead, 0.0); self.assertEqual(eng.travel, 'rate')
+        self.assertAlmostEqual(eng.travel_T, 0.064)                                   # the longest lag
+
+    def test_lead_adds_the_planned_velocity(self):
+        coef = 0.025 + loop_delay(0.001, 0.003)                                        # servo_tau + read-to-action delay
+        for lead in ('servo+delay', -1):
+            eng = SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, lead=lead)
+            self.assertAlmostEqual(eng.lead, coef, places=15)
+            cmd = eng.step(np.array([0.2]), np.array([0.2]), np.array([0.2]), qd_plan=np.array([0.5]))
+            self.assertAlmostEqual(float(cmd[0]), 0.2 + coef * 0.5, places=15)        # on the plan: zero correction
+        fixed = SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, lead=0.01)
+        self.assertAlmostEqual(float(fixed.step(np.array([0.2]), np.array([0.2]), np.array([0.2]), qd_plan=np.array([0.5]))[0]), 0.205, places=15)
+
+    def test_lead_needs_the_velocity(self):
+        eng = SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, lead='servo+delay')
+        with self.assertRaises(ValueError):
+            eng.step(np.zeros(1), np.zeros(1), np.zeros(1))
+        with self.assertRaises(ValueError):
+            SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, lead='servo')
+        with self.assertRaises(ValueError):
+            SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, travel='tau')
+
+    def test_e_travel_relaxes_in_one_over_tau(self):
+        eng = SyntonicEngine(np.zeros(1), 0.001, 0.003, w0=10.0, identification='raw', travel='e')
+        a_e = 0.001 / 0.064; checked = 0
+        for k in range(3000):
+            x = np.array([0.3 * np.sin(k * 0.004)]); n = 1e-4 if k % 2 == 0 else -1e-4
+            started, old = eng._started, float(eng.tau[0])
+            eng.step(x, x + n, x - n)
+            if eng._started and not started:
+                self.assertEqual(float(eng.tau[0]), float(eng.tau_target[0]))       # the first fit sets the window
+            if started:
+                want = 1.0 / old + a_e * (1.0 / float(eng.tau_target[0]) - 1.0 / old)
+                self.assertAlmostEqual(1.0 / float(eng.tau[0]) / want, 1.0, places=9); checked += 1
+        self.assertGreater(checked, 1000)
+
+
 if __name__ == '__main__':
     unittest.main()

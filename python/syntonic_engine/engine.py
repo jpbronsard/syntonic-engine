@@ -34,6 +34,21 @@ Two identifications are available for step 3 (the `identification` argument):
 
 The rest (the window law, the floor, the rate limit, the correction) is the engine of the MAESTRO 1 joint bench
 (flow_v5_uprime, 19-21 Oct 2026), extracted without change to the arithmetic.
+
+Two options, off by default (0.2.9; with both off the engine is that of 0.2.8, bit for bit):
+
+  lead     servo lead: the command adds lead x the planned velocity, and the engine's own servo and plan models see
+           the same lead, so its residual stays exogenous. 'servo+delay' (or a negative number) sets it from the
+           facts the engine already takes, servo_tau + loop_delay(dt, frame, sensor_delay): the servo's lag plus the
+           read-to-action delay. Needs the planned velocity (`qd_plan` in `step`). Feed-forward, classical
+           engineering, not the law; on the simulated MAESTRO 1 bench (bench/maestro_2026-11-01, 2 kHz loop) it
+           lowered the pooled baton-tip error by 20 % with 3 ms frames and 14 % with 1.5 ms frames.
+  travel   how the window travels toward the law's target. 'rate' (default): 1/tau stepped toward 1/tau_target, at
+           most tau_rate seconds per second. 'e': theta = 1/tau relaxes exponentially toward 1/tau_target with time
+           constant travel_T (default: the longest lag, 64 ms), the e-geodesic of Dual Geodesy; the window takes the
+           target at the first fit. Shortens fast and lengthens slowly. On the same bench it beat relaxing tau
+           itself in 20 of 20 runs (at 1 s, and on fresh seeds at the declared 64 ms); against the 'rate' travel it
+           is a robustness gain (fewer bad episodes, 3.9 % pooled, better in only 11 of 20 runs), not a uniform one.
 """
 from math import gamma as _gamma
 import numpy as np
@@ -90,11 +105,17 @@ class SyntonicEngine:
     limit : float or str     correction limit (rad). 'authority' (default since 0.2.8), or a negative number, sets it
                              per joint to servo_tau x w0, the largest lag the servo itself can produce (the data
                              sheet's values); a number >= 0 is a fixed limit (5 degrees until 0.2.7)
+    lead : float or str      servo lead (s), off by default (0). 'servo+delay', or a negative number, sets it to
+                             servo_tau + loop_delay(dt, frame, sensor_delay); a number > 0 is a fixed lead. When on,
+                             `step` needs `qd_plan` (0.2.9)
+    travel : str             'rate' (default, the published travel, limited by tau_rate) or 'e' (1/tau relaxes
+                             exponentially, the e-geodesic; tau_rate is then unused) (0.2.9)
+    travel_T : float or None 'e': relaxation time constant (s); None = the longest lag, max(lags) = 64 ms (0.2.9)
     """
 
     def __init__(self, q0, dt, frame, w0, servo_tau=0.025, floor=None, sensor_delay=1e-4, tau_max=0.5,
                  tau_rate=0.4, identification='allan', scales=None, lags=(0.002, 0.004, 0.008, 0.016, 0.032, 0.064),
-                 snr_gate=2.0, ema=1.0, warmup=1.0, limit='authority'):
+                 snr_gate=2.0, ema=1.0, warmup=1.0, limit='authority', lead=0.0, travel='rate', travel_T=None):
         q0 = np.asarray(q0, dtype=float); n = q0.shape[0]
         self.n, self.dt = n, float(dt)
         self.frame_every = max(1, int(round(frame / dt)))
@@ -111,6 +132,19 @@ class SyntonicEngine:
         if identification not in ('allan', 'raw'):
             raise ValueError("identification must be 'allan' or 'raw'")
         self.identification = identification
+        if isinstance(lead, str):
+            if lead != 'servo+delay':
+                raise ValueError("lead must be a number (s) or 'servo+delay'")
+            lead = -1.0
+        self.lead = self.servo_tau + loop_delay(dt, frame, sensor_delay) if float(lead) < 0 else float(lead)
+        if travel not in ('rate', 'e'):
+            raise ValueError("travel must be 'rate' or 'e'")
+        self.travel = travel
+        self.travel_T = float(max(lags)) if travel_T is None else float(travel_T)
+        if not self.travel_T > 0:
+            raise ValueError('travel_T must be positive')
+        self.a_e = self.dt / self.travel_T
+        self._started = False
         self.a_w = dt / ema
         self.warm = int(round(warmup / dt))
         # state
@@ -187,10 +221,13 @@ class SyntonicEngine:
         return None
 
     # ---------------------------------------------------------------------------------------------------------- step
-    def step(self, q_plan, read_a, read_b, frame=None):
+    def step(self, q_plan, read_a, read_b, frame=None, qd_plan=None):
         """One loop tick. q_plan: planned positions now (rad); read_a, read_b: two independent encoder reads of the
         joint angles this tick (rad); frame: True when a servo frame is sent this tick (None: every frame period,
-        counted from the first tick). Returns the command to send (rad), held between frames."""
+        counted from the first tick); qd_plan: planned velocities now (rad/s), needed only with the lead. Returns the
+        command to send (rad), held between frames."""
+        if self.lead and qd_plan is None:
+            raise ValueError('the lead needs qd_plan, the planned velocity (rad/s)')
         dt = self.dt
         q = np.asarray(q_plan, dtype=float)
         a = np.asarray(read_a, dtype=float); b = np.asarray(read_b, dtype=float)
@@ -205,13 +242,28 @@ class SyntonicEngine:
             ts = kappa_H(Hn) * (np.maximum(s2, 1e-30) / np.maximum(lam, 1e-30)) ** (1.0 / (2 * Hn + 1))
             ts = np.clip(ts, self.floor, self.tau_max)
             self.tau_target = np.where(valid, ts, self.tau_target); self.H = np.where(valid, Hn, self.H)
-            rr = 1.0 / self.tau; dr_max = self.tau_rate * dt / self.tau ** 2
-            rr = rr + np.clip(1.0 / self.tau_target - rr, -dr_max, dr_max); self.tau = 1.0 / rr
+            rr = 1.0 / self.tau
+            if self.travel == 'e':                                             # theta = 1/tau relaxes (e-geodesic)
+                tau = 1.0 / (rr + self.a_e * (1.0 / self.tau_target - rr))
+                if not self._started:                                          # the first fit sets the window
+                    tau = self.tau_target.copy(); self._started = True
+                self.tau = tau
+            else:
+                dr_max = self.tau_rate * dt / self.tau ** 2
+                rr = rr + np.clip(1.0 / self.tau_target - rr, -dr_max, dr_max); self.tau = 1.0 / rr
         g = 1.0 - np.exp(-dt / self.tau)
         self.u = np.clip(self.u + g * e, -self.limit, self.limit)
-        if (self.k % self.frame_every == 0) if frame is None else frame:
-            self.cmd = q + self.u
-        self.th_m = self.th_m + dt * np.clip((self.cmd - self.th_m) / self.servo_tau, -self.w0, self.w0)
-        self.th_ff = self.th_ff + dt * np.clip((q - self.th_ff) / self.servo_tau, -self.w0, self.w0)
+        send = (self.k % self.frame_every == 0) if frame is None else frame
+        if self.lead:                                                          # servo lead on the planned velocity
+            lead = self.lead * np.asarray(qd_plan, dtype=float)
+            if send:
+                self.cmd = q + lead + self.u
+            self.th_m = self.th_m + dt * np.clip((self.cmd - self.th_m) / self.servo_tau, -self.w0, self.w0)
+            self.th_ff = self.th_ff + dt * np.clip((q + lead - self.th_ff) / self.servo_tau, -self.w0, self.w0)
+        else:
+            if send:
+                self.cmd = q + self.u
+            self.th_m = self.th_m + dt * np.clip((self.cmd - self.th_m) / self.servo_tau, -self.w0, self.w0)
+            self.th_ff = self.th_ff + dt * np.clip((q - self.th_ff) / self.servo_tau, -self.w0, self.w0)
         self.k += 1
         return self.cmd

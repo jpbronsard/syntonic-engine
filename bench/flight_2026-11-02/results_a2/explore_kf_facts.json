@@ -1,0 +1,11 @@
+{
+ "pooled_est_test": {
+  "KF_facts_idle": 0.5833125605090436,
+  "KF_facts_half": 0.5889752947052729,
+  "KF_tuned": 0.23023139848538923,
+  "LAW_c1": 0.27233518567650356,
+  "LAW_c2p8": 0.23261464117023595
+ },
+ "R_mult_facts": 1.0,
+ "note": "exploratory"
+}

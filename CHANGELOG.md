@@ -2,6 +2,73 @@
 
 ## Unreleased
 
+## 0.3.0 (2 Nov 2026)
+
+Two laws whose gains are computed from measured facts, added to the Python package: the syntonic loop law for a servo joint and the Riccati attitude law. Both confirmed pre-registered, in simulation. 0.3.0 contains all of 0.2.9.
+
+- **The 0.2.9 GitHub release.** It was created on main before the 0.2.9 branch was merged, so its tag points to commit c7a4001 and its archive holds the 0.2.8 code. 0.3.0 contains every commit of 0.2.9: the engine options, the MAESTRO 1 bench of 1-2 Nov and the flight controller bench (entry below).
+- **Python package (Python only).** The engine is unchanged in all three languages, and the new laws are not yet in Rust or C++.
+  - **`SyntonicLoopLaw`** (`loop_law.py`).
+    - **What it does.** A joint correction whose PI gains are computed every 0.5 s, as the gains that minimise the loop error predicted from statistics measured live, among the gains that keep the loop robust.
+    - **Statistics.** The disturbance spectrum, from block means of the residual at 2 to 256 ms, and the read noise, from the two encoder reads.
+    - **Robustness.** Phase margin at least 30 degrees, max |S| at most 2.
+    - **Facts.** dt, the frame, servo_tau, w0, and the servo's delay measured once.
+    - **Interface.** `cmd = law.step(q, qd, read_a, read_b, send)`.
+    - **Provenance.** It is the frozen `bench/goal_2026-11-02/servo/syntonic_loop_law.py` (sha256 a7a234cc) with a provenance paragraph added to its docstring; the code is unchanged.
+  - **`RiccatiAttitudeLaw`** (`attitude_law.py`).
+    - **What it does.** A one-axis attitude estimator. Its state is the angle plus one gyro bias per level of a known input that changes the noise (on a multicopter, the throttle). Its gains are the Riccati gains of the model the facts describe.
+    - **Facts.** Per level: s2, lam and T_rec. Also q_b, T_pre, dt and dt_accel.
+    - **Noise reading.** The published live Hadamard reading, with one memory per level, floored at the fact.
+    - **Before and at arming.** Stationary alignment before arming, then the arming covariance from the calibration's error.
+    - **Provenance.** It is LAW_R of confirmation 3 (`ricv2.RicV`), rewritten as a self-contained single column. Its `step` and `arm` are those of the harness.
+  - **New tests.** `python/tests/test_loop_law.py`: the package law against the frozen file bit for bit on a closed loop, the chosen gains on the robust grid, a regression value. `test_attitude_law.py`: the prediction and the update against the textbook formulas, the stationary alignment, the arming covariance, consistency with its own covariance on a synthetic flight, the per-level noise memory, a regression value.
+  - **The gate.** `bench/goal_2026-11-02/package_gate.py`: inside the frozen harnesses the two classes reproduce the recorded runs with a difference of exactly 0.0.
+    - Servo: run 'C1 A 71', all three columns; with `all`, the LAW column of all 90 runs.
+    - Flight: LAW_R and LAW_Rqb4 for seeds 500-501 in C1 and C3; with `all`, all 60 flights.
+- **Bench `bench/goal_2026-11-02/`.**
+  - **Provenance.** Written and run by the assistant with two sub-agents; not yet reproduced by the author. Every frozen file is copied byte for byte.
+  - **Contents.** `NOTE.md` with the sequence, the results, the verdicts and the limits. `replay_setup.sh`, because the frozen scripts name absolute paths of the working session.
+  - **Goal set by the author:** parity with or better than a tuned PID and a tuned Kalman in every circumstance, servo frames at most 333 Hz, a realistic test.
+  - **Servo** (`confirm_servo.py`, sha256 af4996a0, fresh seeds 71-75 x excerpts A and B).
+    - **Bench.** A realistic bench written by a sub-agent: MAESTRO 1 baton arm, 1 kHz loop, 3 ms frames, PWM latency 2.5 ms, compliance, gear play, quantization. It reproduces `examples/servo_bench.py` bit for bit at the published plant.
+    - **Rivals.** PIDs tuned at commissioning on the published 280-point grid.
+    - **Held.** S1: parity with the PID given the same lead and frame-mean term in all nine circumstances, worst 1.009. S2: better wherever the law re-measures what changed (noise step 0.778, bursts 0.887, servo 35 ms 0.930, 18 ms 0.970, load 0.948). S3: better than the conventional tuned PID everywhere, 0.708 to 0.902.
+    - **Described.** Less jitter than the PID in every circumstance.
+  - **Flight, looped bench** (`confirm_flight.py`, sha256 6eac13e1, seeds 400-409).
+    - **Failed.** F1 (vibration step 1.149 against the corpus's tuned Kalman), F5 and F8 (1.256, 1.251).
+    - **Held as predicted.** F4 and F7: the steady-state law does not reach the throttle-scheduled Kalman in switching flights (about 2x). So the goal was not met on that bench.
+  - **Flight, realistic bench** (`confirm_flight3.py`, sha256 181406c1, fresh seeds 500-509).
+    - **The bench.** Amendments 3 and 4 were declared after that failure. Block-bootstrap replay of the logged records replaced the loops, which had made the 60 s tilt mean 5 to 8 times too precise at half throttle. The initial attitude is unknown.
+    - **The law.** The Riccati form, its structure chosen on dev seeds 300-309.
+    - **Held.** R1: parity or better with all three truth-tuned Kalman filters in all six circumstances, worst 0.985. R2: better in the ten claimed cells, 0.266 to 0.906. R3: the steady-state law is not at parity with the scheduled Kalman in switching flights, 1.762 and 1.681.
+    - KF_sched3 and KF_full3 converged to the same filter.
+  - **Of 14 predictions, 3 failed,** all on the looped bench.
+- **Docs.** README: an announcement at the top, the two laws in the quick start and the checks, and the repository listing. `bench/README.md` names the new folder. `rust/README.md` says the laws are not in the crate yet.
+- **Version strings 0.3.0** in the Python package, the Rust crate and CITATION.cff. CITATION.cff: the abstract mentions the two laws.
+
+## 0.2.9 (2 Nov 2026)
+
+Engine: two options, off by default, the servo lead and the e-geodesic travel of the window. Bench: the MAESTRO 1 joint bench of 1-2 Nov 2026 and a one-axis flight controller.
+
+- Engine (Python, Rust, C++), two options; with both off the arithmetic is that of 0.2.8 (the replay logs of `rust/tools/make_replay_log.py` and the output of `examples/servo_bench.py` are byte-identical):
+  - **Servo lead.** The command adds lead x the planned velocity, and the engine's own servo and plan models see the same lead, so its residual stays exogenous. Python `lead='servo+delay'` (or a negative number), Rust and C++ a negative `lead`: servo_tau + loop_delay(dt, frame, sensor_delay), from facts the engine already takes; a positive number sets a fixed lead. It needs the planned velocity: Python `step(..., qd_plan=...)` (an error without it), Rust and C++ `step_lead(q, qd, a, b, frame)` (Rust's `step` panics if the lead is on; C++'s `step` applies no lead).
+  - **Window travel.** Python `travel='e'`, Rust `Travel::E`, C++ `syntonic::TRAVEL_E`: theta = 1/tau relaxes exponentially toward 1/tau_target with time constant `travel_T` (default: the longest lag, 64 ms), the window taking the target at the first fit; `tau_rate` is then unused. The default `'rate'` is the published travel.
+  - Rust: `Config` gained the fields `lead`, `travel` and `travel_t`; build it with `..Config::default()`. C++: `Engine::target(j)` reads the law's target window.
+  - New tests in all three languages. The replay logs gain two files with both options on (`replay_log_lead.bin`, raw; `replay_log_lead_allan.bin`), and the replays a mode argument (`raw-lead`, `allan-lead`). Agreement with Python with the options on: C++ 2.4e-13 and 3.6e-14 rad, Rust 6.2e-14 and 1.3e-14 rad.
+  - `bench/maestro_2026-11-01/engine_options_gate.py` checks that the options reproduce, with a difference of exactly 0.0 mm, the bench arms they come from (BASE and E64 of `transport_confirm.py`).
+- MAESTRO 1 joint bench, 1-2 Nov 2026 (`bench/maestro_2026-11-01/`, self-contained on the model of `bench/cadence_2026-10-31/`; written and run by the assistant, not yet reproduced by the author; seven pre-registered scripts with their hashes, two earlier frozen versions that never ran, the exploratory passes and every result file; `NOTE.md` records which predictions held):
+  - **The servo lead** (`eg732_lead.py`, `eg732_hold.py`): with the frames at the servos' ceiling (1.5 ms, standing in for 732 Hz) the lead servo_tau x planned velocity lowers the tip error by 10 % (L1 held). With the loop delay added, (servo_tau + D) x velocity, by a further 4 % at every frame (D3 held). The gap between slow and fast frames does not move (D1, D2 failed), and with any lead the e-geodesic cadence falls to the slowest frame, about 10 % behind the fastest fixed frame (L2, E2, E2L, D4 failed). Best configuration: 0.587 mm pooled against 0.834 for 333 Hz without the lead, classical engineering rather than the law.
+  - **The adaptive window** (`window_vs_frozen.py`): 15 % better than the window frozen at its own mean without the lead, 48 % with it (W1 to W3 held). That rival is weak: against the best single fixed window, chosen on one seed and run on four others (exploratory), the adaptive window is 4.5 % better, 12 of 16, and slightly worse on excerpt A under steady noise.
+  - **The window's travel** (`window_transport.py`, then `transport_confirm.py` on fresh seeds with a declared time constant of 64 ms, the longest lag): relaxing 1/tau (the e-geodesic of Dual Geodesy) beats relaxing tau, 19 % at 1 s and 3 % at 0.1 s (P2a, P2b held), then 2.9 % in 20 of 20 on fresh seeds (C2 held). Against the published travel: 3.9 % better pooled with fewer bad episodes, but better in only 11 of 20 runs (C1 failed on consistency).
+  - **The size of the effect** (exploratory passes, then `confirm_dose.py` on fresh seeds): against the best fixed window for the same conditions, the law is 14.6 % better under a x100 noise step (K1 held, 10 of 10), 16.4 % with the e travel (K2 held), and 6.2 % better with the e travel under frequent bursts (K4 held); the e travel's gain over the published travel in bursts did not replicate (K3 failed, 1.2 % against a 5 % bar). Exploratory headroom: a clairvoyant two-window schedule bounds the gain; the published law captures 72 % of it under the large step; an oracle noise estimate on the wrong time scale makes things worse.
+  - **The PID given the same lead and frames** (`pid_lead_fair.py`, fresh seeds 41-45, the PID re-tuned joint by joint on the published 280-point grid at the 2 kHz loop, 1.5 ms frames and the same lead (servo_tau + D) x velocity; requested by the author): the PID wins. Under steady noise its tip error is 29 % lower than the engine's (0.350 against 0.491 mm, 0 of 10 for the engine), under the x10 noise step the two are level (0.615 against 0.630); R1 to R4 all failed, and the lead helps the PID more (29 % against 17 %). Exploratory: tuned on the other excerpt the PID loses almost nothing (0.364 mm steady). What remains for the law here is that it needs no tuning: the PID's published gains carried to the new configuration are 33 % worse than its re-tuned ones.
+  - **kappa** (`kappa_dyn2.py`, fresh seeds): on the published bench the best static factor on kappa_H is 1.0, regret 0 (Q1 held); with the lead and the faster frames it is 0.7, regret 3.6 % (Q2 held). A dynamic kappa learned from the tracking error by extremum seeking settles at 0.99 and 0.96 (the author's JP1 held), and one shared factor does as well as six per-joint ones (JP2 held); it costs about 1 % (D1 failed) and does not find 0.7 (D2 failed in that setting).
+- Flight controller, 2 Nov 2026 (`bench/flight_2026-11-02/`; one axis, the X500's logged vibration noise from `bench/software_2026-10-26/data`, 10 test seeds; written and run by the assistant; four amendments declared before any test-seed run: grid edges three times, and a first noise model whose looped, mean-free gyro never drifted). The law's attitude estimator at kappa = 1 (live noise, the drift fact per throttle level, start-up schedule, bias loop off, 1/tau travel), with setpoint feed-forward and the motor lead, against a PID with the flown fixed 0.5 s window and a PID with a two-state Kalman filter tuned against truth, every arm's gains tuned on the same grid:
+  - Held: the estimator divides the flown window's error by 8.6 (F1); the controller flies 81 % better than the PID (F3) and 21 % better than the PID with the Kalman filter (F4), 10 of 10 each; the in-flight dynamic kappa hears nothing (K1, predicted).
+  - Failed: the truth-tuned Kalman estimator is 18 % better than the law at kappa = 1 (F2); calibrated once against truth, the law's best factor is 2.8 (the author's JPq, [0.8, 1.25], and the assistant's K2, at most 0.7, both failed).
+  - Exploratory, after the verdicts: the 21 % over the Kalman controller is the feed-forward (the Kalman given the same feed-forward flies at 0.453 deg against 0.476); a Kalman set from the same facts without truth estimates at 0.58 deg against the law's 0.27; the law at c = 2.8 matches the tuned Kalman (0.233 against 0.231 deg). Hypothesis, untested: the drift fact at half throttle, from one Allan point on the only 8 s record, is inflated.
+- README: an announcement at the top, the options in the quick start and the checks; the repository listing and `bench/README.md` name the two new folders. Version strings 0.2.9 (Python package, Rust crate, CITATION.cff).
+
 - `CITATION.cff`: the abstract (Zenodo's description) brought to 0.2.8. The MAESTRO 1 sentence said the engine matches a tuned PID at the baton tip; with the PID given the same correction limit it is at parity under steady noise on one excerpt, 20 % behind on the other, and 17 to 31 % ahead when the noise jumps. The authority fact now names the correction limit; the cross-language agreement reads 5e-14 rad, as in the 0.2.8 entry.
 
 ## 0.2.8 (1 Nov 2026)
