@@ -11,6 +11,23 @@ ORCID: [0009-0008-6639-7553](https://orcid.org/0009-0008-6639-7553)
 
 *MAESTRO 1 conducting Beethoven's Fifth in a MuJoCo simulation, every arm joint driven by this engine. Seven seconds from the full video: [download the full video](https://github.com/jpbronsard/syntonic-engine/releases/download/v0.1.0/MAESTRO1_Syntonic_Conductor_v4_web.mp4) (7:28, 1080p, 324 MB, CC BY-SA 4.0).*
 
+> **2 November 2026 (0.3.1): the two laws of 0.3.0 in C++ and Rust, checked against Python.**
+>
+> - **What is new.** `SyntonicLoopLaw` and `RiccatiAttitudeLaw` are in the C++ headers (`cpp/SyntonicLoopLaw.h`, `cpp/RiccatiAttitudeLaw.h`) and in the Rust crate, with the same facts and the same arithmetic. Nothing in the laws changed. The engine is unchanged in all three languages.
+> - **Checked against Python.** The Python laws were recorded tick by tick on the realistic MAESTRO 1 bench, on two closed loops (two joints and one) and on two flights, one synthetic and one on the realistic flight bench (`rust/tools/make_law_replay_log.py`).
+>   - **Loop law.** In both languages it chooses the same gains as Python at every tick. Its other outputs agree to 2.4e-13 of their scale. At every recomputation the chosen gains' predicted error was below the next candidate's by at least 3.5e-6 in relative terms, far more than rounding can move.
+>   - **Attitude law.** It agrees exactly (difference 0.0).
+>   - **The same on an emulated Cortex-M7** (QEMU), built by arm-none-eabi-g++ 13 with newlib, the toolchain family of Teensyduino.
+> - **On a Teensy 4.1 the loop law's gain recomputation is heavy.** About 4 ms on our PC, and by LLVM's Cortex-M7 model about 0.2 to 0.3 s on the Teensy: far more than one 1 ms tick.
+>   - **A new option, `spread`, off by default.** It divides the recomputation over up to 499 ticks: about 0.45 ms of each tick for two joints (estimate). With `spread = 0` the law is Python's.
+>   - **The gains are the same but take effect later, and that costs.** On the realistic bench (development seeds, 6 paired runs each), gains 499 ticks late raise the tip error by 3.7 % at nominal and 4.8 % under the noise step; 250 ticks late, by 1.5 % and 1.9 %. At nominal that is more than the law's margin over the PID given the same lead (ratio 0.994 in the confirmation).
+>   - **Two ways to make it cheaper are measured but not in the law.** Stopping a candidate's sum once it cannot win (the same gains) would evaluate about half the points. A rearrangement of the loop's denominator would cut the modelled cost per point from 97 to 70 cycles.
+> - **The attitude law is cheap:** about 0.1 µs per gyro sample on our PC.
+>
+> **What this is not.** Ported and checked against Python, not yet run on the Teensy. The Teensy figures are a model's estimate; `examples/teensy/LoopLawTiming.ino` measures them on the board. The C++ was compiled for the Teensy's core and replayed on an emulated Cortex-M7. The Rust crate was not cross-compiled: its Cortex-M target could not be installed here.
+>
+> Details: [`CHANGELOG.md`](CHANGELOG.md) and [`bench/port_2026-11-02/`](bench/port_2026-11-02/).
+
 > **2 November 2026 (0.3.0): a servo loop law at parity with tuned PIDs, and a Riccati attitude law ahead of tuned Kalman filters (simulation, pre-registered). Includes all of 0.2.9.**
 >
 > - **Servo.** The syntonic loop law computes a joint's PI gains every 0.5 s from statistics it measures live, among the gains that keep the loop robust. Nothing is tuned. Its facts are the loop timing, two data-sheet values and the servo's delay, measured once. It is a different law from the engine's window, which lost to a re-tuned PID given the same lead in 0.2.9 (below).
@@ -178,7 +195,7 @@ while running:
 
 Two options, off by default (0.2.9): `lead='servo+delay'` adds (servo_tau + the loop delay) x the planned velocity to the command and needs the planned velocity on each tick, `eng.step(q_plan(t), a, b, qd_plan=qd_plan(t))`; `travel='e'` lets the window travel toward the law's target in 1/tau (the e-geodesic) with a 64 ms time constant. In C++ set `cfg.lead = -1` and `cfg.travel = syntonic::TRAVEL_E` and call `eng.step_lead(q_plan, qd_plan, read_a, read_b)`; in Rust `Config { lead: -1.0, travel: Travel::E, .. }` and `eng.step_lead(&q_plan, &qd_plan, &read_a, &read_b, None)`.
 
-Two laws whose gains are computed from measured facts (0.3.0, Python only; see `bench/goal_2026-11-02/NOTE.md`):
+Two laws whose gains are computed from measured facts (0.3.0, in C++ and Rust since 0.3.1; see `bench/goal_2026-11-02/NOTE.md`):
 
 ```python
 from syntonic_engine import SyntonicLoopLaw, RiccatiAttitudeLaw
@@ -208,6 +225,18 @@ eng.begin(q0, w0, cfg);
 
 A sketch to start from is in `examples/teensy/SyntonicJoint.ino`. You fill in the encoder and servo calls for your board.
 
+Since 0.3.1 the two laws are there too, `cpp/SyntonicLoopLaw.h` and `cpp/RiccatiAttitudeLaw.h`, header-only, with no heap allocation, no exceptions and no RTTI:
+
+```cpp
+#include "SyntonicLoopLaw.h"
+static syntonic::SyntonicLoopLaw<2> law;      // 114 KB for two joints: static, not on the stack
+syntonic::LoopLawConfig cfg;  cfg.dead = 0.0025;  cfg.spread = 499;    // spread: see the 0.3.1 note above
+law.begin(q0, w0, cfg);
+// on each tick:  const double* cmd = law.step(q_plan, qd_plan, read_a, read_b, frame_now);
+```
+
+`examples/teensy/LoopLawTiming.ino` measures the loop law's cost on the board. With GCC, add `-ffp-contract=off` to keep the PC's arithmetic exactly; GCC's default fuses multiply-adds, which changes results by rounding only (checked on an emulated Cortex-M7).
+
 ## In Rust
 
 `rust/` is a `no_std` crate with no allocation (math from `libm`), so it suits embedded Rust as well as a PC:
@@ -218,7 +247,7 @@ let mut eng: Engine<6> = Engine::new(&q0, &w0, Config { dt: 0.001, frame: 0.003,
 // on each tick:  let cmd = eng.step(&q_plan, &read_a, &read_b, None);
 ```
 
-See `rust/README.md` for details.
+Since 0.3.1 the crate also has `SyntonicLoopLaw` and `RiccatiAttitudeLaw`. See `rust/README.md` for details.
 
 ## Results on the MAESTRO 1 joint bench (simulation)
 
@@ -289,9 +318,10 @@ What this shows:
 - On the same 33 s, 12-joint replay, the C++ header agrees with the Python engine to 1.5e-14 rad (raw identification) and 7.8e-16 rad (block means); the Rust crate to 5.4e-14 rad and 8.9e-16 rad. With the two options of 0.2.9 on (lead and e travel): C++ 2.4e-13 and 3.6e-14 rad, Rust 6.2e-14 and 1.3e-14 rad. With the options off the replay logs and `examples/servo_bench.py` are byte-identical to 0.2.8.
 - The options reproduce the bench arms they come from exactly: `bench/maestro_2026-11-01/engine_options_gate.py` (difference 0.0 mm).
 - The two laws of 0.3.0 reproduce their pre-registered confirmations exactly inside the frozen benches. `bench/goal_2026-11-02/package_gate.py` gives a difference of 0.0 on all 90 servo runs and all 60 flights. The flight part needs `replay_setup.sh` (see that folder's `NOTE.md`). The two laws are unit-tested in `python/tests`, and the servo law there against the frozen file bit for bit.
+- The C++ and Rust ports of the two laws (0.3.1) replay the Python laws' records (`rust/tools/make_law_replay_log.py`: the realistic MAESTRO 1 bench with and without `spread`, two closed loops, a synthetic flight and the realistic flight bench). The loop law chooses the same gains as Python at every tick, with its other outputs within 2.4e-13 of their scale; the attitude law agrees exactly. The same replays agree on an emulated Cortex-M7 with newlib, built by arm-none-eabi-g++ (`bench/port_2026-11-02/m7/run_qemu.sh`). Unit tests: `cpp/tests/laws.cpp` and `cargo test`.
 - The block-mean identification is unit-tested on a fractional Brownian target with read noise large enough to defeat the raw one (`python/tests`).
 - `examples/arm_fk.py`, the baton-tip kinematics in plain numpy, agrees with MuJoCo to 7e-16 m over 200 random poses.
-- Neither the C++ header nor the Rust crate has run on a microcontroller yet. The Rust crate builds as `no_std` but has not been cross-compiled for a Cortex-M board, and the Teensy sketch has only been compiled on a PC against stand-ins for the Arduino functions.
+- Neither the C++ headers nor the Rust crate have run on a microcontroller yet. The Rust crate builds as `no_std` but has not been cross-compiled for a Cortex-M board. The C++ headers of the laws compile for the Teensy's Cortex-M7 (arm-none-eabi-g++, and clang freestanding with no allocator, exception or RTTI symbols). The Teensy sketches have only been compiled against stand-ins for the Arduino functions.
 
 To run the checks yourself, from the repository root (Python 3.9 or later, a C++11 compiler, and a recent stable Rust):
 
@@ -307,20 +337,28 @@ g++ -O2 -std=c++11 -Icpp cpp/tests/replay.cpp -o replay_cpp
 ./replay_cpp replay_log_lead.bin replay_w0.bin raw-lead && ./replay_cpp replay_log_lead_allan.bin replay_w0.bin allan-lead
 g++ -O2 -std=c++11 -Icpp cpp/tests/limit.cpp -o limit_cpp && ./limit_cpp   # the correction limit (0.2.8)
 g++ -O2 -std=c++11 -Icpp cpp/tests/options.cpp -o options_cpp && ./options_cpp   # the lead and the e travel (0.2.9)
+python rust/tools/make_law_replay_log.py             # the two laws (0.3.1): replay_loop_*.bin, replay_att_synth.bin
+g++ -O2 -std=c++11 -Icpp cpp/tests/laws.cpp -o laws_cpp && ./laws_cpp
+g++ -O2 -std=c++11 -Icpp cpp/tests/replay_laws.cpp -o replay_laws_cpp
+./replay_laws_cpp replay_loop_bench.bin replay_loop_bench_spread.bin replay_loop_two.bin replay_loop_one.bin replay_att_synth.bin
 cd rust && cargo test && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin raw \
         && cargo run --release --example replay -- ../replay_log_allan.bin ../replay_w0.bin allan \
         && cargo run --release --example replay -- ../replay_log_lead.bin ../replay_w0.bin raw-lead \
-        && cargo run --release --example replay -- ../replay_log_lead_allan.bin ../replay_w0.bin allan-lead
+        && cargo run --release --example replay -- ../replay_log_lead_allan.bin ../replay_w0.bin allan-lead \
+        && cargo run --release --example replay_laws -- ../replay_loop_bench.bin ../replay_loop_bench_spread.bin \
+           ../replay_loop_two.bin ../replay_loop_one.bin ../replay_att_synth.bin
 ```
 
 ## What is in the repository
 
 ```
-python/syntonic_engine/   the engine (numpy), and since 0.3.0 the loop law and the Riccati attitude law (Python
-                          only), with unit tests in python/tests/
+python/syntonic_engine/   the engine (numpy), and since 0.3.0 the loop law and the Riccati attitude law, with unit
+                          tests in python/tests/
 cpp/SyntonicEngine.h      the engine as a single C++ header (both identifications), with replay, limit and options tests in cpp/tests/
-rust/                     the engine as a no_std Rust crate, with a replay check against Python
-examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/
+cpp/SyntonicLoopLaw.h,    the two laws in C++ (0.3.1), with unit tests and replays against Python in cpp/tests/
+cpp/RiccatiAttitudeLaw.h
+rust/                     the engine and since 0.3.1 the two laws as a no_std Rust crate, with replay checks against Python
+examples/                 servo_bench.py (the table above, numpy + scipy), arm_fk.py, data/, teensy/ (two sketches)
 bench/                    the MAESTRO 1 joint bench scripts and every result file (the scripts need the MAESTRO 1
                           simulation model, which is not included, but all results are), and the software bench
                           of 26 Oct 2026 against adaptive estimators, with the quadrotor steps 5 to 6f and
@@ -333,7 +371,9 @@ bench/                    the MAESTRO 1 joint bench scripts and every result fil
                           (flight_2026-11-02/: against a PID and a tuned Kalman filter, on the X500's logged noise),
                           and the pre-registered confirmations of 2 Nov 2026 (goal_2026-11-02/: the loop law
                           against tuned PIDs on a realistic servo bench, the attitude laws against truth-tuned
-                          Kalman filters on a looped, then a realistic flight bench, every frozen file kept)
+                          Kalman filters on a looped, then a realistic flight bench, every frozen file kept), and
+                          the port of 2 Nov 2026 (port_2026-11-02/: the cost of spread on the realistic bench, the
+                          Cortex-M7 cycle model, the replays on an emulated Cortex-M7, the pruning estimate)
 docs/bench_note.md        the bench note: setup, the predictions written before each run, results and failures
 ```
 

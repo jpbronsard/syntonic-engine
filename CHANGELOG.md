@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.3.1 (2 Nov 2026)
+
+The two laws of 0.3.0 ported from Python to C++ and Rust, with the same facts and the same arithmetic, and checked against Python on replays. Nothing in the laws changed; the engine is unchanged in all three languages. Not yet run on a microcontroller.
+
+- **C++** (header-only, C++11, no heap allocation, no exceptions, no RTTI).
+  - **`cpp/SyntonicLoopLaw.h`**: `syntonic::SyntonicLoopLaw<N, PIPE>` with `LoopLawConfig`; `begin(q0, w0, cfg)` returns false when a fact is out of range, `step(q, qd, a, b, send)`. 114 KB for two joints: keep it in a static.
+  - **`cpp/RiccatiAttitudeLaw.h`**: `syntonic::RiccatiAttitudeLaw<L>` with `AttitudeLevel` and `AttitudeConfig`; levels by number, `begin(levels, q_b, T_pre, cfg)`, `step(g, have_a, a, level)`, `arm()`.
+- **Rust** (`no_std`, no allocation): modules `loop_law` and `attitude_law`, `SyntonicLoopLaw<N, PIPE>`, `RiccatiAttitudeLaw<L>`. Missing facts panic, as the Python classes raise; the accelerometer sample is an `Option<f64>`.
+- **New option `spread`** (C++ and Rust, off by default). The loop law's gain recomputation (about 1.3 million complex responses) runs in one tick with `spread = 0`, as in Python. With `spread = m` it is divided evenly over the m ticks that follow (blocks of 50 frequencies, the arithmetic in the same order), and the same gains take effect m ticks later. Its Python reference is `SpreadLoopLaw` in `rust/tools/make_law_replay_log.py`.
+- **Equivalence with Python** (`rust/tools/make_law_replay_log.py`, `cpp/tests/replay_laws.cpp`, `rust/examples/replay_laws.rs`).
+  - **The replays.** The loop law on the realistic MAESTRO 1 bench (6 joints, development seed 91, the noise step, 2.5 ms servo delay; with `spread` 0 and 400), two joints and one joint in closed loop. The attitude law on a synthetic flight and on the realistic flight bench (C5, development seed 300).
+  - **Loop law.** Same gains as Python at every tick, in both languages. Largest differences relative to scale: commands 2e-16, A 2.4e-13, gamma 6e-14, Ki 6e-17 (the grid, one rounding). The best and the next J differed by at least 3.5e-6 in relative terms at every recomputation, so rounding cannot change the choice.
+  - **Attitude law.** Difference 0.0 in the angle, the biases, the covariance and the noise readings, in both languages.
+  - **On an emulated Cortex-M7** (QEMU mps2-an500, arm-none-eabi-g++ 13, newlib; `bench/port_2026-11-02/m7/run_qemu.sh`): the same. With GCC's default fused multiply-adds instead of `-ffp-contract=off`: the same gains, the attitude angle within 1.3e-17 rad.
+- **Cost.**
+  - **On our PC** (Xeon 2.8 GHz, g++ -O2, one core): an ordinary tick of the loop law 0.3 to 0.4 us for two joints. A gain recomputation 4 ms for two joints with 878 robust candidates (servo delay 2.5 ms), 6 to 8 ms with 1246 (no delay). The attitude law about 0.1 us per gyro sample.
+  - **On a Teensy 4.1** (600 MHz, an estimate from LLVM's Cortex-M7 scheduling model on the code arm-none-eabi-g++ produces; `bench/port_2026-11-02/m7/cycle_model.sh`): 97 cycles per (candidate, frequency) point, so 0.21 s per recomputation with 878 candidates and 0.30 s with 1246. That is too much for one tick. With `spread = 499`, about 0.45 ms of each 1 ms tick for two joints; an ordinary tick about 10 to 20 us. Assumptions: the model's double-precision costs (multiply 4 cycles, multiply-accumulate 8, divide 27), data in tightly coupled memory, newlib's pow and log at a few hundred cycles each. `examples/teensy/LoopLawTiming.ino` measures it on the board.
+  - **What the delay costs** (`bench/port_2026-11-02/spread_effect.py`, realistic bench, development seeds 91-93, excerpts A and B, paired; described, not pre-registered). Tip error ratio to `spread = 0`: 1.015 (250 ticks) and 1.037 (499) at nominal, 1.019 and 1.048 under the noise step; worse in 6 of 6 each time.
+  - **Not implemented, measured.** Stopping a candidate's sum once it exceeds the best J so far gives the same gains and would evaluate 46 % (6 joints) to 56 % (2 joints) of the points (`bench/port_2026-11-02/prune_estimate.py`). Writing |1+L|^2 as a quadratic in Ki per Kp row changes it by at most 1.8e-15 relative and would cut the modelled cost per point from 97 to 70 cycles.
+- **Tests.** `cpp/tests/laws.cpp`: the facts, the gains on the robust grid in a closed loop, `spread` giving the first gains unchanged exactly m ticks later, the attitude law's prediction and update against the textbook formulas, the arming covariance. The same in `cargo test` (9 new tests).
+- **Teensy.** `examples/teensy/LoopLawTiming.ino`, a timing sketch for two joints by the cycle counter (compiled for Cortex-M7 against stand-ins, not run).
+- **Docs.** README: a note at the top, the laws in the C++ and Rust sections, the checks, the listing. `rust/README.md`: the laws in the crate. `bench/README.md` names `port_2026-11-02/`. Docstrings of the Python package: the laws are no longer Python only.
+- **Version strings 0.3.1** in the Python package, the Rust crate and CITATION.cff; in the CITATION.cff abstract, the sentence saying the laws are Python only now says they are in C++ and Rust.
+
 ## 0.3.0 (2 Nov 2026)
 
 Two laws whose gains are computed from measured facts, added to the Python package: the syntonic loop law for a servo joint and the Riccati attitude law. Both confirmed pre-registered, in simulation. 0.3.0 contains all of 0.2.9.

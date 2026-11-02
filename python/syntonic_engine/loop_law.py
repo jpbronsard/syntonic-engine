@@ -27,7 +27,7 @@ EACH TICK, per joint:
      servo_tau x w0); at each frame the proportional term uses the mean error over the ticks since the last frame;
      command = q + L x qd + clip(Kp e_mean + I, +-limit), L = the lead coefficient (shared with the rival PID).
 
-In the package since 0.3.0 (Python only): this module is the frozen file
+In the package since 0.3.0 (in C++ and Rust since 0.3.1): this module is the frozen file
 bench/goal_2026-11-02/servo/syntonic_loop_law.py (sha256 a7a234ccefb2c9bb963b87b9a3268493644127bfd43d44c387e1411b3910b2b3)
 with this paragraph added; the code is unchanged. Its pre-registered confirmation against tuned PIDs on a realistic
 MAESTRO 1 bench (servo frames 333 Hz, nine circumstances, fresh seeds) is bench/goal_2026-11-02/servo/confirm_servo.py,
