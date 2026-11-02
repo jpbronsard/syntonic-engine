@@ -1,0 +1,12 @@
+{"profile": "step100", "excerpt": "B", "seed": 21, "ORACLE": 1.3753668987812855, "ORACLE_E64": 1.414938900901611}
+{"profile": "step100", "excerpt": "A", "seed": 21, "ORACLE": 1.5092721106088696, "ORACLE_E64": 1.471212486612893}
+{"profile": "step100", "excerpt": "B", "seed": 22, "ORACLE": 1.3249610461913846, "ORACLE_E64": 1.3402277241975091}
+{"profile": "step100", "excerpt": "A", "seed": 22, "ORACLE": 1.3629397192255075, "ORACLE_E64": 1.3221577264298432}
+{"profile": "step100", "excerpt": "B", "seed": 23, "ORACLE": 1.377953713525422, "ORACLE_E64": 1.3989459069440646}
+{"profile": "step100", "excerpt": "A", "seed": 23, "ORACLE": 1.203680630183803, "ORACLE_E64": 1.2317233940676164}
+{"profile": "bursts", "excerpt": "B", "seed": 21, "ORACLE": 1.0509321632570585, "ORACLE_E64": 1.054922191836843}
+{"profile": "bursts", "excerpt": "A", "seed": 21, "ORACLE": 1.0091679857305893, "ORACLE_E64": 0.9964994479640531}
+{"profile": "bursts", "excerpt": "B", "seed": 22, "ORACLE": 1.140144802540025, "ORACLE_E64": 1.1468665846210269}
+{"profile": "bursts", "excerpt": "A", "seed": 22, "ORACLE": 1.031137730954578, "ORACLE_E64": 1.0162354111740761}
+{"profile": "bursts", "excerpt": "B", "seed": 23, "ORACLE": 1.1187410698743514, "ORACLE_E64": 1.1203466415436716}
+{"profile": "bursts", "excerpt": "A", "seed": 23, "ORACLE": 1.01091095355968, "ORACLE_E64": 1.009761650732408}
