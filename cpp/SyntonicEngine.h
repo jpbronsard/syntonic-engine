@@ -14,6 +14,10 @@
 //   RAW   (the 0.1.x engine, bit for bit): structure function of the raw residual at lags of 2 to 64 ms; valid where
 //         the motion over 64 ms is far above the read noise, as on the MAESTRO 1 joint bench.
 //
+// Two options, off by default (since 0.2.9; with both off the engine is that of 0.2.8, bit for bit): Config::lead, a
+// servo lead on the planned velocity (feed-forward; call step_lead), and Config::travel, how the window travels toward
+// the law's target (TRAVEL_E: 1/tau relaxes exponentially, the e-geodesic of Dual Geodesy). See the Python module docstring.
+//
 // Usage (12 joints, 1 kHz loop, 333 Hz servo frames):
 //   syntonic::Engine<12> eng;  syntonic::Config cfg;  cfg.dt = 0.001; cfg.frame = 0.003;
 //   eng.begin(q0, w0, cfg);                       // q0: start angles (rad), w0: no-load speeds (rad/s)
@@ -42,6 +46,9 @@ static inline real window_floor(real dt, real frame, real sensor_delay = 1e-4) {
 }
 
 enum Identification { ALLAN = 0, RAW = 1 };
+// window travel toward the law's target (0.2.9): TRAVEL_RATE = 1/tau stepped, at most tau_rate s/s (published, default);
+// TRAVEL_E = theta = 1/tau relaxes exponentially with time constant travel_T, the window taking the target at the first fit
+enum Travel { TRAVEL_RATE = 0, TRAVEL_E = 1 };
 
 struct Config {
   real dt = 0.001;            // loop period (s)
@@ -61,6 +68,10 @@ struct Config {
   int nlags = 6;                                                     // RAW: lags used; ALLAN: finest scales fitted
   real scales[16] = {0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128, 0.256, 0.512, 1.024, 2.048, 4.096, 0, 0, 0, 0};
   int nscales = 12;                                                  // ALLAN: block lengths (s)
+  real lead = 0;              // servo lead (s), off by default (0.2.9); negative = servo_tau + loop_delay(dt, frame,
+                              // sensor_delay); positive = fixed. When on, call step_lead with the planned velocity
+  Travel travel = TRAVEL_RATE;       // window travel (0.2.9)
+  real travel_T = -1;         // E: relaxation time constant (s); negative = the longest of the lags used (64 ms)
 };
 
 // N joints; MAXLAG = longest RAW lag in loop ticks (64 at 1 kHz, 128 at 2 kHz); unused by ALLAN but still allocated
@@ -96,6 +107,10 @@ class Engine {
       cnt_[i] = 0; hasprev_[i] = false;
     }
     finest_ = c.nlags;
+    lead_ = c.lead < 0 ? c.servo_tau + loop_delay(c.dt, c.frame, c.sensor_delay) : c.lead;
+    real tT = c.travel_T;
+    if (tT <= 0) { tT = 0; for (int i = 0; i < c.nlags && i < 8; i++) if (c.lags[i] > tT) tT = c.lags[i]; }
+    ae_ = c.dt / tT; started_ = false;
     aw_ = c.dt / c.ema; warm_ = lround(c.warmup / c.dt); k_ = 0; head_ = 0;
     for (int j = 0; j < N; j++) {
       w0_[j] = w0[j]; lim_[j] = c.limit >= 0 ? c.limit : c.servo_tau * w0[j]; cmd[j] = q0[j]; thm_[j] = q0[j]; thff_[j] = q0[j]; u[j] = 0;
@@ -108,8 +123,21 @@ class Engine {
 
   // one tick: q = planned angles, a and b = two independent reads of every encoder (rad);
   // frame = 1 when a servo frame is sent now, 0 when not, -1 to count frames internally. Returns the command.
-  const real* step(const real q[N], const real a[N], const real b[N], int frame = -1) {
+  // with the lead on (Config::lead != 0) use step_lead: here the lead is not applied.
+  const real* step(const real q[N], const real a[N], const real b[N], int frame = -1) { return tick_(q, 0, a, b, frame); }
+
+  // one tick with the servo lead (0.2.9): as step, with qd = the planned velocities now (rad/s)
+  const real* step_lead(const real q[N], const real qd[N], const real a[N], const real b[N], int frame = -1) {
+    return tick_(q, qd, a, b, frame);
+  }
+
+  real floor_s() const { return floor_; }
+  real target(int j) const { return tgt_[j]; }   // the law's target window of joint j (s)
+
+ private:
+  const real* tick_(const real q[N], const real* qd, const real a[N], const real b[N], int frame) {
     const real dt = dt_;
+    const bool first = !started_, lead_on = qd != 0 && lead_ != 0;
     const bool raw = cfg_.identification == RAW;
     if (raw) head_ = (head_ + 1) % (MAXLAG + 1);
     bool send = frame < 0 ? (k_ % frame_every_ == 0) : (frame != 0);
@@ -160,23 +188,33 @@ class Engine {
         real ts = kappa_H(Hn) * pow((s2 > 1e-30 ? s2 : 1e-30) / (lam > 1e-30 ? lam : 1e-30), 1.0 / (2 * Hn + 1));
         ts = clampr(ts, floor_, cfg_.tau_max);
         if (nok >= 2) { tgt_[j] = ts; H[j] = Hn; }
-        real rr = 1.0 / tau[j], drm = cfg_.tau_rate * dt / (tau[j] * tau[j]);
-        rr += clampr(1.0 / tgt_[j] - rr, -drm, drm); tau[j] = 1.0 / rr;
+        real rr = 1.0 / tau[j];
+        if (cfg_.travel == TRAVEL_E) {                                           // theta = 1/tau relaxes (e-geodesic)
+          tau[j] = first ? tgt_[j] : 1.0 / (rr + ae_ * (1.0 / tgt_[j] - rr));
+        } else {
+          real drm = cfg_.tau_rate * dt / (tau[j] * tau[j]);
+          rr += clampr(1.0 / tgt_[j] - rr, -drm, drm); tau[j] = 1.0 / rr;
+        }
       }
       real g = 1.0 - exp(-dt / tau[j]);
       u[j] = clampr(u[j] + g * e, -lim_[j], lim_[j]);
-      if (send) cmd[j] = q[j] + u[j];
-      thm_[j] += dt * clampr((cmd[j] - thm_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
-      thff_[j] += dt * clampr((q[j] - thff_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
+      if (lead_on) {                                                      // servo lead on the planned velocity
+        real ld = lead_ * qd[j];
+        if (send) cmd[j] = q[j] + ld + u[j];
+        thm_[j] += dt * clampr((cmd[j] - thm_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
+        thff_[j] += dt * clampr((q[j] + ld - thff_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
+      } else {
+        if (send) cmd[j] = q[j] + u[j];
+        thm_[j] += dt * clampr((cmd[j] - thm_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
+        thff_[j] += dt * clampr((q[j] - thff_[j]) / cfg_.servo_tau, -w0_[j], w0_[j]);
+      }
     }
     if (!raw) for (int i = 0; i < nsc_; i++) if (done[i]) { cnt_[i] = 0; hasprev_[i] = true; }
+    if (k_ > warm_) started_ = true;
     k_++;
     return cmd;
   }
 
-  real floor_s() const { return floor_; }
-
- private:
   // log-log fit of the noise-corrected structure function D over the scales that clear the floor by snr_gate
   // (fallback: all positive D); with finest > 0, only the finest that many of them. Same arithmetic as engine.py.
   void fit_(const real* D, const real* fl, int m, const real* L, int finest, real& Hn, real& lam, int& nok) const {
@@ -200,6 +238,7 @@ class Engine {
   }
 
   Config cfg_;
+  real lead_, ae_; bool started_;
   real dt_, floor_, aw_, w0_[N], lim_[N], thm_[N], thff_[N], tgt_[N], logl_[8], Dk_[8][N], hist_[MAXLAG + 1][N];
   real logs_[16], ablk_[16], acc_[16][N], prev_[16][N], DA_[16][N];
   long sc_[16], cnt_[16]; int nblk_[16][N]; bool hasprev_[16];

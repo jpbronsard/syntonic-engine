@@ -13,6 +13,8 @@ let cmd = eng.step(&q_plan, &read_a, &read_b, None);                 // None: th
 // send cmd to the servos on each frame; eng.tau holds each joint's window (s)
 ```
 
+Two options, off by default since 0.2.9 (with both off the arithmetic is that of 0.2.8): `Config::lead`, a servo lead on the planned velocity (negative: servo_tau plus the loop delay, from the facts the engine already takes), used through `eng.step_lead(&q_plan, &qd_plan, &read_a, &read_b, None)` (`step` panics if the lead is on); and `Config::travel`, `Travel::E` to let the window travel in 1/tau (the e-geodesic) with `Config::travel_t` (default: the longest lag, 64 ms). `Config` gained three fields, so build it with `..Config::default()`.
+
 `Engine<N, RING>` handles `N` joints. `RING` is the length of the residual history in loop ticks and must be larger than the longest lag in ticks: 65 is enough at 1 kHz, and the default of 129 also covers 2 kHz. For 12 joints the engine takes about 14 KB with the default `RING` (8 KB with `RING = 65`), so on a small board keep it in a `static` rather than on the stack.
 
 ## Checking it against Python
@@ -23,8 +25,10 @@ let cmd = eng.step(&q_plan, &read_a, &read_b, None);                 // None: th
 python rust/tools/make_replay_log.py                 # from the repository root
 cd rust && cargo run --release --example replay -- ../replay_log.bin ../replay_w0.bin raw
 cd rust && cargo run --release --example replay -- ../replay_log_allan.bin ../replay_w0.bin allan
+cd rust && cargo run --release --example replay -- ../replay_log_lead.bin ../replay_w0.bin raw-lead          # options on
+cd rust && cargo run --release --example replay -- ../replay_log_lead_allan.bin ../replay_w0.bin allan-lead
 ```
 
-On our machine the largest difference over the 33,000 ticks was 5.4e-14 rad with the raw identification and 8.9e-16 rad with the block-mean one (the default since 0.2.0), with identical final windows on all twelve joints in both cases. `Config::identification` selects between `Identification::Allan` and `Identification::Raw`. `cargo test` runs the unit tests and the example in the documentation.
+On our machine the largest difference over the 33,000 ticks was 5.4e-14 rad with the raw identification and 8.9e-16 rad with the block-mean one (the default since 0.2.0), with identical final windows on all twelve joints in both cases; with the lead and the e travel on, 6.2e-14 and 1.3e-14 rad. `Config::identification` selects between `Identification::Allan` and `Identification::Raw`. `cargo test` runs the unit tests and the example in the documentation.
 
 The crate builds as `no_std` on a PC. It has not yet been cross-compiled for or run on a Cortex-M board such as the Teensy 4.x (target `thumbv7em-none-eabihf`).
