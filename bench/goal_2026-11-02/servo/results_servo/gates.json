@@ -1,0 +1,13 @@
+{
+ "G1 A steady 5": {
+  "pid": 0.6761419910844138,
+  "syn": 0.6839103668504339,
+  "ok": true
+ },
+ "G1 B step 7": {
+  "pid": 1.3144217897870654,
+  "syn": 1.0973289271118845,
+  "ok": true
+ },
+ "script_sha256": "af4996a0efaae1d8bcab93aeda59bc1ce8cd2b957dceb444034a173662f6f567"
+}

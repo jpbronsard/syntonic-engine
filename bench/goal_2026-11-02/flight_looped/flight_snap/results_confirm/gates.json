@@ -1,0 +1,28 @@
+{
+ "G0_files": 14,
+ "G1_C1": {
+  "LAW_I": 0.0,
+  "KF_rival": 0.0,
+  "LAW_II": 0.0
+ },
+ "G1_C2": {
+  "LAW_I": 0.0,
+  "KF_rival": 0.0,
+  "LAW_II": 0.0
+ },
+ "G2_edges": {
+  "KF_sched": {
+   "m": "interior",
+   "rho_h": "interior",
+   "QG": "at 0",
+   "QB": "at 0"
+  },
+  "KF_sched_btab": {
+   "m": "interior",
+   "rho_h": "high edge",
+   "QG": "at 0",
+   "QB": "interior"
+  }
+ },
+ "ok": true
+}

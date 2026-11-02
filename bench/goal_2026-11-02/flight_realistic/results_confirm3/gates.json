@@ -1,0 +1,48 @@
+{
+ "G0_files": 20,
+ "G1_C1": {
+  "KF_rival3": 0.0,
+  "KF_full3": 0.0,
+  "LAW_R": 0.0,
+  "LAW_Rqb4": 0.0,
+  "LAW_I": 0.0,
+  "sched_minus_full": 0.0
+ },
+ "G1_C4": {
+  "KF_rival3": 0.0,
+  "KF_full3": 0.0,
+  "LAW_R": 0.0,
+  "LAW_Rqb4": 0.0,
+  "LAW_I": 0.0,
+  "sched_minus_full": 0.0
+ },
+ "G2": {
+  "rival": {
+   "edges": [
+    "interior",
+    "at 0",
+    "interior"
+   ],
+   "flat_last4": true
+  },
+  "sched": {
+   "edges": [
+    "low edge",
+    "interior",
+    "at 0",
+    "low edge"
+   ],
+   "flat_last4": true
+  },
+  "full": {
+   "edges": [
+    "low edge",
+    "interior",
+    "at 0",
+    "low edge"
+   ],
+   "flat_last4": true
+  }
+ },
+ "ok": true
+}

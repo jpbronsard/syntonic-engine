@@ -1,0 +1,44 @@
+{
+ "KF_sched": {
+  "m": 2048.0,
+  "rho_h": 0.3535533905932738,
+  "QG": 0.0,
+  "QB": 0.0,
+  "J_train": 0.08923400179273575,
+  "coarse": {
+   "m": 4096.0,
+   "rho_h": 0.25,
+   "QG_mult": 0.0,
+   "QB_mult": 4096.0,
+   "J": 0.0900195876203668
+  },
+  "refinements": 1,
+  "edges": {
+   "m": "interior",
+   "rho_h": "interior",
+   "QG": "at 0",
+   "QB": "at 0"
+  }
+ },
+ "KF_sched_btab": {
+  "m": 131072.0,
+  "rho_h": 1048576.0,
+  "QG": 0.0,
+  "QB": 1.5596411893079483e-07,
+  "J_train": 0.07708262446366793,
+  "coarse": {
+   "m": 262144.0,
+   "rho_h": 16.0,
+   "QG_mult": 0.0,
+   "QB_mult": 65536.0,
+   "J": 0.07713355403379721
+  },
+  "refinements": 8,
+  "edges": {
+   "m": "interior",
+   "rho_h": "high edge",
+   "QG": "at 0",
+   "QB": "interior"
+  }
+ }
+}
