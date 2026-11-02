@@ -10,6 +10,12 @@ abstract: >-
   drift in an estimator, and access to the read noise. The law sets a window, not a loop gain; stability stays with
   the machine. Two options, off by default since 0.2.9, add a servo lead on the planned velocity and let the window
   travel in 1/tau (the e-geodesic of Dual Geodesy). Implemented in Python, C++ and Rust, which agree to 2.5e-13 rad.
+  Since 0.3.0 the Python package also holds two laws whose gains are computed from measured facts, nothing tuned: a
+  servo loop law that sets a joint's PI gains from statistics measured live, and a Riccati attitude law; in
+  pre-registered simulations on fresh seeds the first is at parity with or better than PIDs tuned at commissioning in
+  nine circumstances of a realistic MAESTRO 1 bench with 333 Hz frames, and the second has a lower estimation error
+  than Kalman filters tuned against truth in six circumstances of a one-axis flight bench on the X500's logged noise,
+  a bench defined after a first confirmation on a looped bench failed.
   On synthetic benches it is at parity with hardened Bayesian Kalman banks within its class and behind them where a
   second-order model applies; on the simulated MAESTRO 1 joint bench, against a tuned PID given the same correction
   limit, its baton-tip error under steady noise is at parity on one excerpt and 20 % higher on the other, and 17 to
@@ -36,7 +42,7 @@ authors:
     given-names: "Jean-Pierre"
     orcid: "https://orcid.org/0009-0008-6639-7553"
     affiliation: "SyntonicAI Recherche, Montréal, QC, Canada"
-version: "0.2.9"
+version: "0.3.0"
 doi: "10.5281/zenodo.23549689"
 url: "https://doi.org/10.5281/zenodo.23549689"
 date-released: 2026-11-02

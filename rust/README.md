@@ -32,3 +32,5 @@ cd rust && cargo run --release --example replay -- ../replay_log_lead_allan.bin 
 On our machine the largest difference over the 33,000 ticks was 5.4e-14 rad with the raw identification and 8.9e-16 rad with the block-mean one (the default since 0.2.0), with identical final windows on all twelve joints in both cases; with the lead and the e travel on, 6.2e-14 and 1.3e-14 rad. `Config::identification` selects between `Identification::Allan` and `Identification::Raw`. `cargo test` runs the unit tests and the example in the documentation.
 
 The crate builds as `no_std` on a PC. It has not yet been cross-compiled for or run on a Cortex-M board such as the Teensy 4.x (target `thumbv7em-none-eabihf`).
+
+The two laws added to the Python package in 0.3.0, `SyntonicLoopLaw` and `RiccatiAttitudeLaw`, are not in this crate yet.

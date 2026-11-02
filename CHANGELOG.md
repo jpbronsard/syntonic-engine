@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+## 0.3.0 (2 Nov 2026)
+
+Two laws whose gains are computed from measured facts, added to the Python package: the syntonic loop law for a servo joint and the Riccati attitude law. Both confirmed pre-registered, in simulation. 0.3.0 contains all of 0.2.9.
+
+- **The 0.2.9 GitHub release.** It was created on main before the 0.2.9 branch was merged, so its tag points to commit c7a4001 and its archive holds the 0.2.8 code. 0.3.0 contains every commit of 0.2.9: the engine options, the MAESTRO 1 bench of 1-2 Nov and the flight controller bench (entry below).
+- **Python package (Python only).** The engine is unchanged in all three languages, and the new laws are not yet in Rust or C++.
+  - **`SyntonicLoopLaw`** (`loop_law.py`).
+    - **What it does.** A joint correction whose PI gains are computed every 0.5 s, as the gains that minimise the loop error predicted from statistics measured live, among the gains that keep the loop robust.
+    - **Statistics.** The disturbance spectrum, from block means of the residual at 2 to 256 ms, and the read noise, from the two encoder reads.
+    - **Robustness.** Phase margin at least 30 degrees, max |S| at most 2.
+    - **Facts.** dt, the frame, servo_tau, w0, and the servo's delay measured once.
+    - **Interface.** `cmd = law.step(q, qd, read_a, read_b, send)`.
+    - **Provenance.** It is the frozen `bench/goal_2026-11-02/servo/syntonic_loop_law.py` (sha256 a7a234cc) with a provenance paragraph added to its docstring; the code is unchanged.
+  - **`RiccatiAttitudeLaw`** (`attitude_law.py`).
+    - **What it does.** A one-axis attitude estimator. Its state is the angle plus one gyro bias per level of a known input that changes the noise (on a multicopter, the throttle). Its gains are the Riccati gains of the model the facts describe.
+    - **Facts.** Per level: s2, lam and T_rec. Also q_b, T_pre, dt and dt_accel.
+    - **Noise reading.** The published live Hadamard reading, with one memory per level, floored at the fact.
+    - **Before and at arming.** Stationary alignment before arming, then the arming covariance from the calibration's error.
+    - **Provenance.** It is LAW_R of confirmation 3 (`ricv2.RicV`), rewritten as a self-contained single column. Its `step` and `arm` are those of the harness.
+  - **New tests.** `python/tests/test_loop_law.py`: the package law against the frozen file bit for bit on a closed loop, the chosen gains on the robust grid, a regression value. `test_attitude_law.py`: the prediction and the update against the textbook formulas, the stationary alignment, the arming covariance, consistency with its own covariance on a synthetic flight, the per-level noise memory, a regression value.
+  - **The gate.** `bench/goal_2026-11-02/package_gate.py`: inside the frozen harnesses the two classes reproduce the recorded runs with a difference of exactly 0.0.
+    - Servo: run 'C1 A 71', all three columns; with `all`, the LAW column of all 90 runs.
+    - Flight: LAW_R and LAW_Rqb4 for seeds 500-501 in C1 and C3; with `all`, all 60 flights.
+- **Bench `bench/goal_2026-11-02/`.**
+  - **Provenance.** Written and run by the assistant with two sub-agents; not yet reproduced by the author. Every frozen file is copied byte for byte.
+  - **Contents.** `NOTE.md` with the sequence, the results, the verdicts and the limits. `replay_setup.sh`, because the frozen scripts name absolute paths of the working session.
+  - **Goal set by the author:** parity with or better than a tuned PID and a tuned Kalman in every circumstance, servo frames at most 333 Hz, a realistic test.
+  - **Servo** (`confirm_servo.py`, sha256 af4996a0, fresh seeds 71-75 x excerpts A and B).
+    - **Bench.** A realistic bench written by a sub-agent: MAESTRO 1 baton arm, 1 kHz loop, 3 ms frames, PWM latency 2.5 ms, compliance, gear play, quantization. It reproduces `examples/servo_bench.py` bit for bit at the published plant.
+    - **Rivals.** PIDs tuned at commissioning on the published 280-point grid.
+    - **Held.** S1: parity with the PID given the same lead and frame-mean term in all nine circumstances, worst 1.009. S2: better wherever the law re-measures what changed (noise step 0.778, bursts 0.887, servo 35 ms 0.930, 18 ms 0.970, load 0.948). S3: better than the conventional tuned PID everywhere, 0.708 to 0.902.
+    - **Described.** Less jitter than the PID in every circumstance.
+  - **Flight, looped bench** (`confirm_flight.py`, sha256 6eac13e1, seeds 400-409).
+    - **Failed.** F1 (vibration step 1.149 against the corpus's tuned Kalman), F5 and F8 (1.256, 1.251).
+    - **Held as predicted.** F4 and F7: the steady-state law does not reach the throttle-scheduled Kalman in switching flights (about 2x). So the goal was not met on that bench.
+  - **Flight, realistic bench** (`confirm_flight3.py`, sha256 181406c1, fresh seeds 500-509).
+    - **The bench.** Amendments 3 and 4 were declared after that failure. Block-bootstrap replay of the logged records replaced the loops, which had made the 60 s tilt mean 5 to 8 times too precise at half throttle. The initial attitude is unknown.
+    - **The law.** The Riccati form, its structure chosen on dev seeds 300-309.
+    - **Held.** R1: parity or better with all three truth-tuned Kalman filters in all six circumstances, worst 0.985. R2: better in the ten claimed cells, 0.266 to 0.906. R3: the steady-state law is not at parity with the scheduled Kalman in switching flights, 1.762 and 1.681.
+    - KF_sched3 and KF_full3 converged to the same filter.
+  - **Of 14 predictions, 3 failed,** all on the looped bench.
+- **Docs.** README: an announcement at the top, the two laws in the quick start and the checks, and the repository listing. `bench/README.md` names the new folder. `rust/README.md` says the laws are not in the crate yet.
+- **Version strings 0.3.0** in the Python package, the Rust crate and CITATION.cff. CITATION.cff: the abstract mentions the two laws.
+
 ## 0.2.9 (2 Nov 2026)
 
 Engine: two options, off by default, the servo lead and the e-geodesic travel of the window. Bench: the MAESTRO 1 joint bench of 1-2 Nov 2026 and a one-axis flight controller.

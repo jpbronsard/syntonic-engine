@@ -7,5 +7,5 @@ from .engine import SyntonicEngine, kappa_H, C_H, loop_delay, window_floor
 from .loop_law import SyntonicLoopLaw
 from .attitude_law import RiccatiAttitudeLaw
 
-__version__ = '0.2.9'
+__version__ = '0.3.0'
 __all__ = ['SyntonicEngine', 'kappa_H', 'C_H', 'loop_delay', 'window_floor', 'SyntonicLoopLaw', 'RiccatiAttitudeLaw']
