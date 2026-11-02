@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
-title: "Syntonic Engine: one formula, three facts about the machine, no tuning"
+title: "Syntonic Engine: gains from measured facts, no tuning"
 abstract: >-
   One formula, three facts about the machine, no tuning: the engine sets the time window of a correction or an
   estimate from statistics measured in the signal, by a law derived from first principles (Theorem U' of the Syntony
