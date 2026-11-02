@@ -4,7 +4,10 @@
 // Replays a log written by rust/tools/make_law_replay_log.py through the C++ loop law or attitude law and compares
 // every output with the Python law's. Prints, per output, the largest absolute difference and that difference
 // relative to the output's largest magnitude over the run; for the loop law also the ticks where the chosen gains
-// differ (none expected) and the time per tick. From the repository root:
+// differ (none expected) and the time per tick. Since 0.3.2 each loop log is replayed five times: with the two
+// speed-ups of the gain recomputation off and on (prune, quad), and with both on and delta = 1e3, which makes every
+// choice fall back to the scan from L. The replay reports the share of the points evaluated, the fallbacks (none
+// expected but in the fifth), and the smallest gap seen between the best and the next J. From the repository root:
 //   python rust/tools/make_law_replay_log.py
 //   g++ -O2 -std=c++11 -Wall -Wextra -pedantic -Icpp cpp/tests/replay_laws.cpp -o replay_laws_cpp
 //   ./replay_laws_cpp replay_loop_bench.bin replay_loop_bench_spread.bin replay_loop_two.bin replay_loop_one.bin
@@ -40,13 +43,13 @@ static bool report(std::vector<Group>& g) {
 }
 
 template <int N>
-static bool loop_replay(const std::vector<double>& v, const char* path) {
-  static syntonic::SyntonicLoopLaw<N> law;   // static: about 70 KB + 12 KB per joint
+static bool loop_replay(const std::vector<double>& v, const char* path, bool prune, bool quad, double delta) {
+  static syntonic::SyntonicLoopLaw<N> law;   // static: about 125 KB + 13 KB per joint
   const double* h = &v[0];
   const long T = (long)h[2];
   syntonic::LoopLawConfig cfg;
   cfg.dt = h[3]; cfg.frame = h[4]; cfg.servo_tau = h[5]; cfg.dead = h[6]; cfg.lead = h[7]; cfg.spread = (int)h[8];
-  cfg.every = (int)h[9];
+  cfg.every = (int)h[9]; cfg.prune = prune; cfg.quad = quad; cfg.delta = delta;
   const double *w0 = h + 16, *q0 = w0 + N, *rows = q0 + N;
   const int C = 15 * N + 1;
   if ((long)v.size() != 16 + 2 * N + T * C) { std::printf("%s: bad size\n", path); return false; }
@@ -56,6 +59,7 @@ static bool loop_replay(const std::vector<double>& v, const char* path) {
   const char* names[10] = {"cmd", "Kp", "Ki", "I", "R", "A", "gam", "Oc", "th_m", "th_ff"};
   std::vector<Group> g; for (int i = 0; i < 10; i++) g.push_back(Group(names[i]));
   long idx_bad = 0, nrec = 0; double t_tick = 0, t_rec = 0, t_max = 0; long n_tick = 0;
+  long ndone = 0, pts = 0, pts_tot = 0; double share_max = 0; bool was_pending = false;
   for (long t = 0; t < T; t++) {
     const double* r = rows + t * C;
     const double *q = r, *qd = r + N, *a = r + 2 * N, *b = r + 3 * N, *out = r + 4 * N + 1;
@@ -66,6 +70,11 @@ static bool loop_replay(const std::vector<double>& v, const char* path) {
     if (dts > t_max) t_max = dts;
     const bool rec = cfg.spread == 0 && law.started && (law.tick() - 1) % cfg.every == 0;   // gains recomputed now
     if (rec) { t_rec += dts; nrec++; } else { t_tick += dts; n_tick++; }
+    if (rec || (was_pending && !law.pending())) {               // a recomputation ended in this tick
+      ndone++; pts += law.points_evaluated(); pts_tot += law.points_total();
+      double sh = (double)law.points_evaluated() / law.points_total(); if (sh > share_max) share_max = sh;
+    }
+    was_pending = law.pending();
     for (int j = 0; j < N; j++) {
       g[0].add(cmd[j], out[j]); g[1].add(law.Kp[j], out[N + j]); g[2].add(law.Ki[j], out[2 * N + j]);
       g[3].add(law.I[j], out[3 * N + j]); g[4].add(law.R[j], out[4 * N + j]); g[5].add(law.A[j], out[5 * N + j]);
@@ -74,14 +83,19 @@ static bool loop_replay(const std::vector<double>& v, const char* path) {
       if (law.gain_index(j) != (int)out[10 * N + j]) idx_bad++;
     }
   }
-  std::printf("%s: loop law, %d joint(s), %ld ticks, dead %.1f ms, spread %d, %d robust candidates of %d\n", path, N, T,
-              cfg.dead * 1e3, cfg.spread, law.robust_count(), syntonic::LOOP_NC);
+  std::printf("%s: loop law, %d joint(s), %ld ticks, dead %.1f ms, spread %d, %d robust candidates of %d, prune %d quad %d%s\n",
+              path, N, T, cfg.dead * 1e3, cfg.spread, law.robust_count(), syntonic::LOOP_NC, prune, quad,
+              delta > 1 ? ", delta 1e3 (every choice falls back)" : "");
   std::printf("    chosen gains differ from Python's on %ld joint-ticks\n", idx_bad);
   bool ok = report(g) && idx_bad == 0;
+  std::printf("    recomputations %ld: points evaluated %.1f %% of %ld (largest %.1f %%), fallbacks %ld, late %ld, "
+              "smallest gap best-next J seen %.2e\n", ndone, 100.0 * pts / (pts_tot ? pts_tot : 1),
+              ndone ? pts_tot / ndone : 0L, 100 * share_max, law.fallbacks(), law.late(), law.tie_margin());
   std::printf("    time: begin %.1f ms; step %.2f us per ordinary tick", t_begin * 1e3, 1e6 * t_tick / (n_tick ? n_tick : 1));
   if (nrec) std::printf(", %.2f ms per gain-update tick (%ld)", 1e3 * t_rec / nrec, nrec);
   std::printf(", longest tick %.3f ms\n", t_max * 1e3);
-  return ok;
+  if (delta > 1) return ok && law.fallbacks() == ndone;      // forced: the fallback at every recomputation
+  return ok && law.fallbacks() == 0 && law.late() == 0;
 }
 
 template <int L>
@@ -131,9 +145,16 @@ int main(int argc, char** argv) {
     if (v.size() < 16) { std::fprintf(stderr, "%s: too short\n", argv[i]); return 2; }
     const int kind = (int)v[0], n = (int)v[1];
     bool ok = false;
-    if (kind == 1 && n == 1) ok = loop_replay<1>(v, argv[i]);
-    else if (kind == 1 && n == 2) ok = loop_replay<2>(v, argv[i]);
-    else if (kind == 1 && n == 6) ok = loop_replay<6>(v, argv[i]);
+    if (kind == 1 && (n == 1 || n == 2 || n == 6)) {
+      ok = true;
+      for (int mode = 0; mode < 5; mode++) {   // prune, quad: off off, on off, off on, on on; on on with the fallback forced
+        const bool pr = mode & 1 || mode == 4, qu = mode & 2 || mode == 4;
+        const double de = mode == 4 ? 1e3 : 1e-9;
+        bool m = n == 1 ? loop_replay<1>(v, argv[i], pr, qu, de) : n == 2 ? loop_replay<2>(v, argv[i], pr, qu, de)
+                                                                          : loop_replay<6>(v, argv[i], pr, qu, de);
+        ok = ok && m;
+      }
+    }
     else if (kind == 2 && n == 3) ok = att_replay<3>(v, argv[i]);
     else std::printf("%s: kind %d with %d joints or levels is not compiled in this test\n", argv[i], kind, n);
     std::printf("    %s\n", ok ? "agrees" : "DIFFERS");
