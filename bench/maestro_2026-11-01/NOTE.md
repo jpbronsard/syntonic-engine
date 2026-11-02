@@ -16,6 +16,7 @@ Simulation only, on the model of `examples/servo_bench.py` and `bench/cadence_20
 | window_transport | Window travel in 1/tau (the e-geodesic) against travel in tau | P2a: -19 % at 1 s (20/20). P2b: -3 % at 0.1 s (18/20). | none |
 | transport_confirm (fresh seeds, T = 64 ms declared) | Same, and against the published travel | C2: 1/tau beats tau, 20/20. C3. | C1: against the published travel -3.9 % pooled, but better in only 11/20 runs |
 | confirm_dose (fresh seeds) | The law against the best fixed window under large and frequent noise changes | K1: -14.6 % at a x100 noise step (10/10). K2: -16.4 % with 1/tau travel (10/10). K4: -6.2 % in bursts (10/10). | K3: 1/tau travel against the published travel in bursts, -1.2 % (bar -5 %) |
+| pid_lead_fair (fresh seeds) | The PID given the same lead and frames, re-tuned for them | none | R1-R4: the PID is 29 % better under steady noise, level under the noise step; the lead helps it more |
 | kappa_dyn2 (fresh seeds) | Is kappa_H placed right? A dynamic kappa per joint and shared; the author's predictions | Q1: published bench, best static factor 1.0 (regret 0). Q2: best configuration, best factor 0.7 (regret 3.6 %). JP1: the shared dynamic factor ends at 0.99 and 0.96. JP2: one shared kappa does as well as six. | D1: the dynamic kappa costs about 1 %. D2: in the best configuration it does not find 0.7. |
 
 **In plain terms.**
@@ -24,7 +25,8 @@ Simulation only, on the model of `examples/servo_bench.py` and `bench/cadence_20
 - **What the law itself adds.** About 4.5 % against the best fixed window in ordinary conditions, about 15 % when the noise changes a hundredfold, and about 6 % under frequent bursts, with nothing tuned. Same profile as against the PID: parity in steady conditions, better when conditions change.
 - **kappa_H.** From Theorem U' it places the window exactly right on the published bench. With the lead, the optimum moves to about 0.7, at a 3.6 % cost.
 - **Dual Geodesy.** First measurable difference from the geometry, confirmed twice: the window should travel in 1/tau rather than in tau. Against the published travel it is a robustness gain, not a uniform one.
-- **0.2.9.** The lead and the 1/tau travel are now options of the engine, off by default (last section).
+- **Against a PID given the same lead and frames, re-tuned for them** (section 12): the PID is 29 % more accurate under steady noise and level under the noise step. Every prediction of that test failed. What remains for the law is that it needs no tuning.
+- **0.2.9.** The lead and the 1/tau travel are now options of the engine, off by default (section 11).
 
 ## Files
 
@@ -41,6 +43,7 @@ Pre-registered, unchanged since their runs:
 | `kappa_scale.py` | 235ebf89671482c678023c71bd24156e556f7cfd18fe2721c8f45d0e001fb2ee | frozen, never run (the author asked for a dynamic kappa next) |
 | `kappa_dyn.py` | 9e90b61ce8fb3f247ffb460fbd7734fd22073f887bbff1d3baec881a6c56b065 | `results_kdyn/` (gates only; superseded before its runs, when the author's two statements came) |
 | `kappa_dyn2.py` | 26e1a497cabcdfd14e9c86a1a569a5f891a25ea1629a2823f0234e12b61f435a | `results_kdyn2/` |
+| `pid_lead_fair.py` | 2b0d71f27454b842a9110b2da7689bda6620ede9d8caa94351c36db12af19536 | `results_pid_lead/` |
 
 Exploratory (not judged), with the hard-coded paths of the conversation workspace made relative for the repository:
 
@@ -52,6 +55,7 @@ Exploratory (not judged), with the hard-coded paths of the conversation workspac
   - `explore_dose.py` and `explore_dose2.py` (`results_dose/`, `results_dose_sweep/`);
   - `explore_ema.py`, `explore_oracle.py`, `explore_clair.py` (`results_ema/`, `results_oracle/`, `results_clair/`).
 - **The 0.2.9 gate:** `engine_options_gate.py` (`results_engine_options_gate.json`).
+- **After pid_lead_fair:** `explore_pid_cross.py` (`results_pid_lead/explore_cross.jsonl`).
 
 ## 1. The window against the acceleration (exploratory)
 
@@ -309,9 +313,56 @@ The two pieces that held up are now options of `SyntonicEngine` (Python, Rust an
 
 `engine_options_gate.py` runs the published engine with these options in the harness of `window_transport.py`. It reproduces BASE (lead only) and E64 (lead + e travel) of `transport_confirm.py` with a difference of exactly 0.0 mm (A steady seed 21, B step seed 25).
 
+## 12. The PID given the same lead and frames, re-tuned (`pid_lead_fair.py`, pre-registered)
+
+Asked by the author ("FAIT LE !") after the assistant pointed out that the 30 % of sections 3-4 was the engine against itself. Script sha256 2b0d71f27454b842a9110b2da7689bda6620ede9d8caa94351c36db12af19536, frozen after a smoke test, before its gates, tuning and runs.
+
+**Setting.**
+
+- Baton arm, 2 kHz loop, fixed 1.5 ms frames.
+- The same lead for both, (servo_tau + D) x planned velocity: 26.1 ms.
+- The PID re-tuned the published way: joint by joint, on the published grid of 280 (Kp, Ki, Kd), lowest joint error, steady noise, per excerpt, tuning seeds 61-63.
+- Declared beforehand: the PID was tuned on the same two excerpts it is tested on (other noise draws), which favours it.
+- Edge rule declared beforehand; no joint landed on an edge.
+- Test seeds 41-45: 20 paired runs.
+
+**Gates.** G1 (`examples/servo_bench.py`, PID and engine, A steady seed 5 and B step seed 7) and G2 (F15D and F15 at the fast setting): reproduced exactly.
+
+**Tuned gains.** With the lead the PID wants lower gains than the published ones. Kp 0.5 to 4, Ki 160 to 640 /s, Kd 0, against Kp 3 to 4 and Ki 640 to 1280 published. Without the lead, at the same frames: Kp 2 to 4, Ki 640 to 1280.
+
+| Line | Prediction | Result | Verdict |
+|---|---|---|---|
+| R1 | noise step: SYND <= 0.85 x PIDD, below in >= 9 of 10 | 0.630 against 0.615 (x1.02), 4 of 10 | failed |
+| R2 | steady noise: SYND <= 1.10 x PIDD | 0.491 against 0.350 (x1.40), 0 of 10 | failed |
+| R3 | overall: SYND <= PIDD, below in >= 12 of 20 | 0.565 against 0.500 (x1.13), 4 of 20 | failed |
+| R4 | the lead helps the engine more than the PID | engine -16.7 %, PID -29.3 % | failed |
+
+Pooled tip error (mm):
+
+| Arm | Steady | Noise step | All |
+|---|---|---|---|
+| PIDD (PID + lead, re-tuned) | 0.350 | 0.615 | 0.500 |
+| SYND (engine + lead) | 0.491 | 0.630 | 0.565 |
+| SYNDE (engine + lead + e travel) | 0.492 | 0.615 | 0.557 |
+| PID15 (PID, no lead, re-tuned) | 0.472 | 0.882 | 0.707 |
+| SYN15 (engine, no lead) | 0.580 | 0.764 | 0.678 |
+| PIDDp (PID + lead, published gains) | 0.430 | 0.835 | 0.664 |
+
+By cell (PIDD / SYND / SYNDE): A steady 0.327 / 0.441 / 0.440; A step 0.580 / 0.611 / 0.580; B steady 0.371 / 0.537 / 0.539; B step 0.648 / 0.648 / 0.648. Joint error (deg): PIDD 0.0205, SYND 0.0238. Tip jitter (mm): PIDD 0.463, SYND 0.456.
+
+**Exploratory, after the verdicts** (`explore_pid_cross.py`): the PID with the gains tuned on the other excerpt (A's on B, B's on A) loses almost nothing: 0.364 steady, 0.623 step, 0.510 overall. The engine is below it in 0 of 10 steady runs and 4 of 10 step runs. The PID's lead does not come from being tuned on the test excerpts.
+
+**What it says.**
+
+- **Same lead, same frames, PID re-tuned:** the PID wins. Under steady noise its tip error is 29 % lower than the engine's (0 of 10 runs for the engine). Under the x10 noise step the two are level: the engine is 2 % behind, and the engine with the e travel exactly level.
+- **The engine's advantage under the noise step at the published setting was largely the PID's high gains.** Those gains pass the extra noise through. With the lead, the PID's best gains drop, and the noise step costs it much less (0.882 to 0.615).
+- **At the fast frames alone, without the lead,** the re-tuned PID also beats the engine under steady noise (0.472 against 0.580), and the engine still wins under the noise step (0.764 against 0.882).
+- **What survives for the law:** it needed no tuning. The PID needed a 280-point search per joint and per configuration. Its published gains, carried to the new configuration, are 33 % worse than its re-tuned ones (0.664 against 0.500). The law's case on this bench is portability (no re-tuning when the machine changes), not accuracy against a re-tuned PID.
+- **For any public claim:** at the fast setting with the lead, a re-tuned PID is more accurate than the syntonic engine on this simulated arm.
+
 **Limits of everything above.**
 
 - Simulation, with the servo exactly first order at the 25 ms the lead assumes. On hardware the lead will cancel less.
 - 667 Hz stands in for the servos' 732 Hz.
 - Two excerpts of one piece.
-- The PID was not rerun with the lead and the faster frames. That is the fair comparison for any public claim.
+- The PID, given the same lead and frames and re-tuned, is more accurate than the engine (section 12).
