@@ -75,6 +75,19 @@ Wins in attitude: SYN1 beats PID in 10/10 runs and KF in 10/10. SYNB beats KF in
 - **Why the dynamic kappa hears nothing (rough estimate):** going from c = 1 to c = 2.8 changes the prior variance by about 0.03 deg². The accelerometer innovation carries the per-sample tilt noise, about 31 deg² at low throttle and about 2500 at half. That makes the signal 1e-3 to 1e-5 of the noise. A 10 s EMA at 250 Hz has a relative error of at least about 2 %. The signal is 20 to 2000 times below what the selector can resolve.
 - **Why c = 2.8 rather than 1 (hypothesis, untested):** the tuned Kalman wants Q_G about 0, so the true angle random walk is far smaller than the drift fact lambda says. lambda at half throttle comes from one Allan point at 1 s on an 8 s looped record (7 differences), and it sits on top of the bias wander (-0.019 then -0.032 deg/s in the record's two halves). An inflated lambda shortens the window by sqrt(inflation): c² = 7.8 would mean lambda is overestimated about 8 times. The assistant's K2 had predicted the bias in the other direction (from step 6h); it was wrong.
 
+## Exploratory, regime by regime (`explore_c_by_regime.py`, 2 Nov 2026, after the verdicts)
+
+A check of the hypothesis above: if only the half-throttle drift fact is inflated, the best factor should sit near 1 at low throttle (40 s record) and well above 1 at half throttle (8 s looped record). Estimation error (deg) by regime, the law at c x tau:
+
+| Seeds | Regime | c = 1 | c = 1.4 | c = 2 | c = 2.8 | c = 8 | Best c |
+|---|---|---|---|---|---|---|---|
+| training 100-102 | low | 0.113 | 0.085 | 0.088 | 0.102 | 0.132 | 1.4 |
+| training 100-102 | half | 0.391 | 0.339 | 0.317 | 0.310 | 0.315 | 2.8 |
+| test 200-209 | low | 0.187 | 0.176 | 0.170 | 0.167 | 0.165 | 8 (flat above 2) |
+| test 200-209 | half | 0.337 | 0.306 | 0.289 | 0.283 | 0.278 | 8 (flat above 2.8) |
+
+Half throttle wants a window at least 2.8 times longer, as the hypothesis says. But low throttle also wants a window longer than kappa = 1: 1.4 on the training seeds, and on the test seeds a curve that keeps falling slowly up to 8. So the half-throttle drift fact is not the whole story. A second candidate, untested: the live noise reading, since the accelerometer's tilt noise is not white sample to sample (the tuned Kalman's R is 8192 times the per-sample variance). A longer half-throttle log tests the first candidate only; the gimbal bench with encoders tests both.
+
 ## Status in plain terms
 
 - **Best syntonic flight controller built here:** SYN1, the law at kappa = 1 with everything the benches taught. In attitude it flies 81 % better than the PID with the flown fixed window and 21 % better than PID + truth-tuned Kalman, in 10/10 runs both times.
@@ -110,7 +123,7 @@ Wins in attitude: SYN1 beats PID in 10/10 runs and KF in 10/10. SYNB beats KF in
 | `flight_bench_a2.py` | amendment 2, the gyro keeps its logged bias; all later steps write to `results_a2/` | c89b386c02be84260bef6a4685985cb545dc9216dc288e383fc65c867cbdc8a7 |
 | `flight_bench_a3.py` | amendment 3, widened gain grid (tune) | 0475868d52b91fce045e7fd5ec5ca1bf78d65e8f96ec1f08028bdde138d1b5c0 |
 | `flight_bench_a4.py` | amendment 4, gain grid widened again (tune, run, summarize) | 465c138fe6c354916ba07d8d5b6ae071a8c0339ed6af22ec76cac6bcfa2c5624 |
-| `explore_kfff.py`, `explore_kf_facts.py` | exploratory, after the verdicts | (paths made relative for the repository) |
+| `explore_kfff.py`, `explore_kf_facts.py`, `explore_c_by_regime.py` | exploratory, after the verdicts | (paths made relative for the repository) |
 
 `results/` holds amendment 1's calibration (superseded by amendment 2; the first calibration of `flight_bench.py` was overwritten by it, and its edge values are quoted in amendment 1's docstring). `results_a2/` holds everything judged: `facts.json`, `tuned_estimators.json`, `gains_*.json`, `test_runs.jsonl` (the ten test seeds) and `summary.json` (verdicts), plus the two exploratory outputs.
 
@@ -123,6 +136,7 @@ python bench/flight_2026-11-02/flight_bench_a4.py . run
 python bench/flight_2026-11-02/flight_bench_a4.py . summarize
 python bench/flight_2026-11-02/explore_kfff.py
 python bench/flight_2026-11-02/explore_kf_facts.py
+python bench/flight_2026-11-02/explore_c_by_regime.py
 ```
 
 `run` appends to `results_a2/test_runs.jsonl`; move the recorded file aside first.
