@@ -33,4 +33,35 @@ On our machine the largest difference over the 33,000 ticks was 5.4e-14 rad with
 
 The crate builds as `no_std` on a PC. It has not yet been cross-compiled for or run on a Cortex-M board such as the Teensy 4.x (target `thumbv7em-none-eabihf`).
 
-The two laws added to the Python package in 0.3.0, `SyntonicLoopLaw` and `RiccatiAttitudeLaw`, are not in this crate yet.
+## The two laws of 0.3.0 (since 0.3.1)
+
+`SyntonicLoopLaw` and `RiccatiAttitudeLaw` are in the crate with the facts and the arithmetic of the Python classes; see their module documentation and the Python docstrings.
+
+```rust
+use syntonic_engine::{AttitudeConfig, AttitudeLevel, LoopLawConfig, RiccatiAttitudeLaw, SyntonicLoopLaw};
+
+// a servo joint's PI gains, recomputed every 0.5 s from the live statistics; dead = the servo's delay, measured once
+let cfg = LoopLawConfig { dt: 0.001, frame: 0.003, servo_tau: 0.025, dead: 0.0025, ..LoopLawConfig::default() };
+let mut law: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&q0, &w0, cfg));   // about 114 KB: not on the stack
+let cmd = law.step(&q_plan, &qd_plan, &read_a, &read_b, frame_now);                    // every tick
+
+// a one-axis attitude estimator; per level of the known input that changes the noise (throttle), the facts measured once
+let levels = [AttitudeLevel { s2: s2_idle, lam: lam_idle, t_rec: 0.0 },                // level 0: the ground level
+              AttitudeLevel { s2: s2_low, lam: lam_low, t_rec: t_low },
+              AttitudeLevel { s2: s2_half, lam: lam_half, t_rec: t_half }];
+let mut att = RiccatiAttitudeLaw::new(&levels, q_b, 5.0, AttitudeConfig::default());
+let theta = att.step(gyro, tilt, 1);   // every gyro sample; tilt: Option<f64>, None between accelerometer samples
+// att.arm() at the end of the ground calibration; from then on pass the gyro with the calibration subtracted
+```
+
+The loop law's gain recomputation evaluates about 1.3 million complex responses. With `LoopLawConfig::spread = 0` (the default) it runs in one tick, as in Python: about 4 ms for two joints on our PC, and by LLVM's Cortex-M7 model about 0.2 to 0.3 s on a Teensy 4.1. `spread = m` divides it over the m ticks that follow; the gains are the same but take effect m ticks later, which raises the tip error on the realistic MAESTRO 1 bench by about 1.5 to 2 % at m = 250 and 4 to 5 % at m = 499 (`bench/port_2026-11-02/`).
+
+`tools/make_law_replay_log.py` runs the two Python laws on deterministic inputs and records every tick; the replay example compares the Rust laws with them:
+
+```
+python rust/tools/make_law_replay_log.py              # from the repository root; add --flight-bench for the flight replay
+cd rust && cargo run --release --example replay_laws -- ../replay_loop_bench.bin ../replay_loop_bench_spread.bin \
+        ../replay_loop_two.bin ../replay_loop_one.bin ../replay_att_synth.bin
+```
+
+On our machine the loop law chose the same gains as Python at every tick of every replay (also with `spread = 400`), and its other outputs agreed to 2.4e-13 of their scale; the attitude law agreed exactly (difference 0.0), also on the realistic flight bench.

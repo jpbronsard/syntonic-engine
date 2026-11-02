@@ -25,6 +25,10 @@
 //! `Config::travel`, how the window travels toward the law's target (`Travel::E`: 1/tau relaxes exponentially,
 //! the e-geodesic of Dual Geodesy). See the Python module docstring for what each did on the MAESTRO 1 bench.
 //!
+//! Since 0.3.1 the crate also holds the two laws of 0.3.0, ported from Python with the same arithmetic:
+//! [`SyntonicLoopLaw`], a servo joint's PI gains recomputed every 0.5 s from the statistics measured live, and
+//! [`RiccatiAttitudeLaw`], a one-axis attitude estimator with one gyro bias per throttle level. See their modules.
+//!
 //! The crate is `no_std` and allocation-free (math from `libm`), so it runs on microcontrollers as well as on a PC.
 //!
 //! ```
@@ -40,6 +44,11 @@
 #![cfg_attr(not(test), no_std)]
 
 use libm::{exp, log, pow, round, sqrt, tgamma};
+
+pub mod attitude_law;
+pub mod loop_law;
+pub use attitude_law::{AttitudeConfig, AttitudeLevel, RiccatiAttitudeLaw};
+pub use loop_law::{loop_k_gamma, LoopLawConfig, SyntonicLoopLaw, LOOP_NC, LOOP_NKI, LOOP_NKP, LOOP_NW};
 
 /// Kernel prefactor of Theorem U' for an exponential window on a signal of structure function lambda_H u^(2H).
 pub fn kappa_h(h: f64) -> f64 {

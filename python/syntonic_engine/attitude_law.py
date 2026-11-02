@@ -3,7 +3,7 @@
 """The Riccati attitude law: a one-axis attitude estimator whose gains are the Riccati gains of the model that the
 machine's measured facts describe. Nothing in it is tuned against truth.
 
-In the package since 0.3.0 (Python only). It is the column LAW_R of the pre-registered confirmation 3 of 2 Nov 2026,
+In the package since 0.3.0 (in C++ and Rust since 0.3.1). It is the column LAW_R of the pre-registered confirmation 3 of 2 Nov 2026,
 bench/goal_2026-11-02/flight_realistic/confirm_flight3.py, i.e. ricv2.RicV with the configuration
 dict(k=3, qt='level', prior='vb', qb=q_b at T_rec/2, sa=True, rm='max'), rewritten as a self-contained single column whose
 facts are constructor arguments. Inside the frozen harness it reproduces the confirmation's LAW_R values exactly
