@@ -4,7 +4,11 @@
 // Replays a log written by tools/make_law_replay_log.py through the Rust loop law or attitude law and compares every
 // output with the Python law's. Prints, per output, the largest absolute difference and that difference relative to the
 // output's largest magnitude over the run; for the loop law also the ticks where the chosen gains differ (none
-// expected) and the time per tick. From the rust/ folder, after `python tools/make_law_replay_log.py` in the root:
+// expected) and the time per tick. Since 0.3.2 each loop log is replayed five times: with the two speed-ups of the
+// gain recomputation off and on (prune, quad), and with both on and delta = 1e3, which makes every choice fall back to
+// the scan from L. The replay reports the share of the points evaluated, the fallbacks (none expected but in the
+// fifth), and the smallest gap seen between the best and the next J. From the rust/ folder, after
+// `python tools/make_law_replay_log.py` in the root:
 //   cargo run --release --example replay_laws -- ../replay_loop_bench.bin ../replay_loop_bench_spread.bin
 //   cargo run --release --example replay_laws -- ../replay_loop_two.bin ../replay_loop_one.bin ../replay_att_synth.bin
 // Exit status 0 when every log agrees: the same gains at every tick and every output within 1e-12 of its scale.
@@ -40,12 +44,12 @@ fn report(g: &[Group]) -> bool {
 
 fn arr<const N: usize>(s: &[f64]) -> [f64; N] { let mut a = [0.0; N]; a.copy_from_slice(&s[..N]); a }
 
-fn loop_replay<const N: usize>(v: &[f64], path: &str) -> bool {
+fn loop_replay<const N: usize>(v: &[f64], path: &str, prune: bool, quad: bool, delta: f64) -> bool {
     let h = v;
     let t_len = h[2] as usize;
     let cfg = LoopLawConfig {
         dt: h[3], frame: h[4], servo_tau: h[5], dead: h[6], lead: if h[7] < 0.0 { None } else { Some(h[7]) },
-        spread: h[8] as u64, every: h[9] as u64, ..LoopLawConfig::default()
+        spread: h[8] as u64, every: h[9] as u64, prune, quad, delta, ..LoopLawConfig::default()
     };
     let (w0, q0) = (arr::<N>(&v[16..]), arr::<N>(&v[16 + N..]));
     let rows = &v[16 + 2 * N..];
@@ -58,6 +62,7 @@ fn loop_replay<const N: usize>(v: &[f64], path: &str) -> bool {
     let mut g: Vec<Group> = names.iter().map(|n| Group::new(n)).collect();
     let (mut idx_bad, mut nrec, mut n_tick) = (0usize, 0usize, 0usize);
     let (mut t_tick, mut t_rec, mut t_max) = (0.0f64, 0.0f64, 0.0f64);
+    let (mut ndone, mut pts, mut pts_tot, mut share_max, mut was_pending) = (0u64, 0u64, 0u64, 0.0f64, false);
     for row in rows.chunks_exact(c) {
         let (q, qd, a, b) = (arr::<N>(row), arr::<N>(&row[N..]), arr::<N>(&row[2 * N..]), arr::<N>(&row[3 * N..]));
         let send = row[4 * N] != 0.0;
@@ -66,8 +71,15 @@ fn loop_replay<const N: usize>(v: &[f64], path: &str) -> bool {
         let cmd = *law.step(&q, &qd, &a, &b, send);
         let dts = s.elapsed().as_secs_f64();
         if dts > t_max { t_max = dts; }
-        if cfg.spread == 0 && law.started && (law.tick() - 1) % cfg.every == 0 { t_rec += dts; nrec += 1; }
-        else { t_tick += dts; n_tick += 1; }
+        let rec = cfg.spread == 0 && law.started && (law.tick() - 1) % cfg.every == 0;   // gains recomputed now
+        if rec { t_rec += dts; nrec += 1; } else { t_tick += dts; n_tick += 1; }
+        if rec || (was_pending && !law.pending()) {                     // a recomputation ended in this tick
+            ndone += 1;
+            pts += law.points_evaluated();
+            pts_tot += law.points_total();
+            share_max = share_max.max(law.points_evaluated() as f64 / law.points_total() as f64);
+        }
+        was_pending = law.pending();
         for j in 0..N {
             g[0].add(cmd[j], out[j]); g[1].add(law.kp[j], out[N + j]); g[2].add(law.ki[j], out[2 * N + j]);
             g[3].add(law.integral[j], out[3 * N + j]); g[4].add(law.noise[j], out[4 * N + j]);
@@ -77,10 +89,15 @@ fn loop_replay<const N: usize>(v: &[f64], path: &str) -> bool {
             if gi != out[10 * N + j] { idx_bad += 1; }
         }
     }
-    println!("{}: loop law, {} joint(s), {} ticks, dead {:.1} ms, spread {}, {} robust candidates of {}", path, N, t_len,
-             cfg.dead * 1e3, cfg.spread, law.robust_count(), LOOP_NC);
+    println!("{}: loop law, {} joint(s), {} ticks, dead {:.1} ms, spread {}, {} robust candidates of {}, prune {} quad {}{}",
+             path, N, t_len, cfg.dead * 1e3, cfg.spread, law.robust_count(), LOOP_NC, prune as u8, quad as u8,
+             if delta > 1.0 { ", delta 1e3 (every choice falls back)" } else { "" });
     println!("    chosen gains differ from Python's on {} joint-ticks", idx_bad);
-    let ok = report(&g) && idx_bad == 0;
+    let ok = report(&g) && idx_bad == 0
+        && if delta > 1.0 { law.fallbacks() == ndone } else { law.fallbacks() == 0 && law.late() == 0 };
+    println!("    recomputations {}: points evaluated {:.1} % of {} (largest {:.1} %), fallbacks {}, late {}, \
+              smallest gap best-next J seen {:.2e}", ndone, 100.0 * pts as f64 / pts_tot.max(1) as f64,
+             pts_tot / ndone.max(1), 100.0 * share_max, law.fallbacks(), law.late(), law.tie_margin());
     print!("    time: new {:.1} ms; step {:.2} us per ordinary tick", t_begin * 1e3, 1e6 * t_tick / n_tick.max(1) as f64);
     if nrec > 0 { print!(", {:.2} ms per gain-update tick ({})", 1e3 * t_rec / nrec as f64, nrec); }
     println!(", longest tick {:.3} ms", t_max * 1e3);
@@ -126,9 +143,17 @@ fn main() {
         let v = read_f64(path);
         let (kind, n) = (v[0] as i32, v[1] as usize);
         let ok = match (kind, n) {
-            (1, 1) => loop_replay::<1>(&v, path),
-            (1, 2) => loop_replay::<2>(&v, path),
-            (1, 6) => loop_replay::<6>(&v, path),
+            (1, 1) | (1, 2) | (1, 6) => {
+                let mut ok = true;
+                // prune, quad: off off, on off, off on, on on; on on with delta = 1e3 (every choice falls back)
+                for (prune, quad, delta) in [(false, false, 1e-9), (true, false, 1e-9), (false, true, 1e-9), (true, true, 1e-9),
+                                             (true, true, 1e3)] {
+                    ok &= match n { 1 => loop_replay::<1>(&v, path, prune, quad, delta),
+                                    2 => loop_replay::<2>(&v, path, prune, quad, delta),
+                                    _ => loop_replay::<6>(&v, path, prune, quad, delta) };
+                }
+                ok
+            }
             (2, 3) => att_replay::<3>(&v, path),
             _ => { println!("{}: kind {} with {} joints or levels is not compiled in this example", path, kind, n); false }
         };

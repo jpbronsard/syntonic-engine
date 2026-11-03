@@ -18,28 +18,47 @@
 // accumulates Ki e dt every tick (frozen at the authority limit servo_tau x w0); on a frame tick the proportional term uses
 // the mean error since the last frame; command = q + L x qd + clip(Kp e_mean + I, +-limit).
 //
-// THE GAIN RECOMPUTATION. J is evaluated for every robust candidate (about 900 to 1250 of the 2460) over the 1500
-// frequencies: about 1.3 million complex evaluations per recomputation for all joints together. The frequency responses
-// are not stored (that would take 30 MB); they are recomputed each time from 60 KB of per-frequency constants, so the
-// law takes about 90 KB + 12 KB per joint (114 KB for two joints) and must live in a static, not on the stack.
+// THE GAIN RECOMPUTATION. J is evaluated for the robust candidates (about 900 to 1250 of the 2460) over the 1500
+// frequencies: up to about 1.3 million complex evaluations per recomputation for all joints together. The frequency
+// responses are not stored (that would take 30 MB); they are recomputed each time from 84 KB of per-frequency
+// constants, so the law takes about 125 KB + 13 KB per joint (150 KB for two joints) and must live in a static, not on
+// the stack. Since 0.3.2 the scan is cheaper in two ways that leave the chosen gains unchanged (both on by default;
+// their Python reference is python/syntonic_engine/loop_scan.py):
+//   LoopLawConfig::prune: every term of J is positive, so a partial sum never decreases. The candidates in use are
+//     evaluated first; every 50 frequencies a candidate is dropped once, for every joint, its partial J exceeds the
+//     smaller of their J and the best J so far, times 1 + delta (1e-9): it cannot be chosen. On the replays this
+//     evaluated 39 to 64 % of the points on average, but up to 96 % in one recomputation, so a per-tick budget
+//     cannot count on it.
+//   LoopLawConfig::quad: |1 + L|^2 = P + Ki (Q + Ki R), with P per Kp row and frequency, Q and R per frequency, costs
+//     four operations and a division per point instead of ten and a division (70 instead of 97 cycles per point by
+//     LLVM's Cortex-M7 model). It changes J by rounding only (at most about 5e-13 relative for a robust candidate), so
+//     the choice is certified when the next J exceeds the best by more than delta; otherwise the scan is done again
+//     from L, exactly as in 0.3.1 (a fallback, counted by fallbacks(); it never ran on the replays).
 //   LoopLawConfig::spread = 0 (default): the gains are recomputed and applied in the tick where the Python law does it.
-//     This is the Python law exactly. On our PC it takes 4 to 8 ms for two joints; on a Teensy 4.1 at 600 MHz about
-//     0.2 to 0.3 s by LLVM's Cortex-M7 model (bench/port_2026-11-02/m7/cycle_model.sh; not measured on the board), far
-//     more than one tick of a 1 kHz loop.
-//   spread = m (1 <= m < every): the statistics are taken in the same tick, the work is divided evenly over the m ticks
-//     that follow (blocks of 50 frequencies), and the new gains take effect m ticks later than in the Python law. The
-//     gains are the same; only when they take effect changes, and that costs: on the realistic MAESTRO 1 bench, gains
-//     250 ticks late raise the tip error by about 1.5 to 2 %, 499 ticks late by about 4 to 5 %
-//     (bench/port_2026-11-02/spread_effect.py). The Python reference of the option is rust/tools/make_law_replay_log.py.
+//     This is the Python law exactly. For two joints on the realistic MAESTRO 1 bench (878 robust candidates) it takes
+//     about 0.8 ms on our PC (4.2 ms in 0.3.1); on a Teensy 4.1 at 600 MHz, by LLVM's Cortex-M7 model, about 0.07 s
+//     (0.09 s at most on that bench, 0.16 s if nothing were pruned; 0.21 s in 0.3.1). Far more than one 1 ms tick
+//     (bench/scan_2026-11-02/; not measured on the board).
+//   spread = m (1 <= m < every): the statistics are taken in the same tick, the work is divided over the m ticks that
+//     follow (counted as if nothing were pruned, so that pruning only ends it early), and the new gains take effect m
+//     ticks later than in the Python law. The gains are the same; only when they take effect changes, and that costs:
+//     on the realistic MAESTRO 1 bench, gains 250 ticks late raise the tip error by about 1.5 to 2 %, 365 ticks late
+//     by 2.5 to 3.3 %, 499 ticks late by about 4 to 5 % (bench/port_2026-11-02/spread_effect.py,
+//     bench/scan_2026-11-02/spread_budget.py). The Python
+//     reference of the option is rust/tools/make_law_replay_log.py.
+//   time_candidate() measures on the board the time of one candidate, and spread_for(seconds, budget) gives the
+//     smallest spread whose share of the work fits a declared time per tick (by the model, 365 for 0.45 ms with two
+//     joints and 878 candidates; none below 500 for 0.25 ms): a scheduling choice, opt-in.
 //
 // Numerics: double precision throughout. On the replays of rust/tools/make_law_replay_log.py the robust candidates and
 // the chosen gains agree with Python exactly at every tick, and the continuous values to 2.4e-13 of their scale; also on
 // an emulated Cortex-M7 with newlib (bench/port_2026-11-02/m7/run_qemu.sh). With GCC, -ffp-contract=off keeps the PC's
 // arithmetic; GCC's default for the gnu++ dialects fuses multiply-adds, with differences of rounding size only.
 //
-// Usage (two joints, 1 kHz loop, 333 Hz servo frames):
-//   static syntonic::SyntonicLoopLaw<2> law;  syntonic::LoopLawConfig cfg;  cfg.dead = 0.0025;  cfg.spread = 499;
+// Usage (two joints, 1 kHz loop, 333 Hz servo frames as on the benches; standard digital servos accept about 330 Hz at most (1/330 s); the frame is a fact of the hardware, not a tuning):
+//   static syntonic::SyntonicLoopLaw<2> law;  syntonic::LoopLawConfig cfg;  cfg.dead = 0.0025;
 //   law.begin(q0, w0, cfg);                     // q0: start angles (rad), w0: no-load speeds (rad/s); false if a fact is wrong
+//   optionally, on the board:  law.set_spread(law.spread_for(law.time_candidate(cycles, F_CPU_ACTUAL), 0.00045));
 //   each tick:  const double* cmd = law.step(q_plan, qd_plan, read_a, read_b, frame_now);
 //               on a frame tick, send cmd[j] to servo j
 #pragma once
@@ -76,6 +95,34 @@ static inline real loop_geom(real a, real b, int n, int i) {
   return pow(10.0, i * st + la);
 }
 
+// The two kernels of the gain recomputation: frequencies w0 .. w1-1 of one candidate, J[j] += PhiW[j][w] |S(w)|^2.
+// From L, as in 0.3.1: L = (kp + ki / jW) G.
+template <int N>
+static inline void loop_block_L(real kp, real ki, const real* iW, const real* Gr, const real* Gi,
+                                const real (*PhiW)[LOOP_NW], int w0, int w1, real* J) {
+  real Jl[N];
+  for (int j = 0; j < N; j++) Jl[j] = J[j];
+  for (int w = w0; w < w1; w++) {
+    real kiw = ki * iW[w];
+    real Lr = kp * Gr[w] + kiw * Gi[w], Li = kp * Gi[w] - kiw * Gr[w];
+    real s2 = 1.0 / ((1.0 + Lr) * (1.0 + Lr) + Li * Li);   // |S|^2
+    for (int j = 0; j < N; j++) Jl[j] += PhiW[j][w] * s2;
+  }
+  for (int j = 0; j < N; j++) J[j] = Jl[j];
+}
+// By the quadratic form (0.3.2): |1 + L|^2 = P + ki (Q + ki R), P = 1 + kp (2 Re G + kp |G|^2) for the candidate's Kp row.
+template <int N>
+static inline void loop_block_quad(real ki, const real* P, const real* Q, const real* R,
+                                   const real (*PhiW)[LOOP_NW], int w0, int w1, real* J) {
+  real Jl[N];
+  for (int j = 0; j < N; j++) Jl[j] = J[j];
+  for (int w = w0; w < w1; w++) {
+    real s2 = 1.0 / (P[w] + ki * (Q[w] + ki * R[w]));      // |S|^2
+    for (int j = 0; j < N; j++) Jl[j] += PhiW[j][w] * s2;
+  }
+  for (int j = 0; j < N; j++) J[j] = Jl[j];
+}
+
 struct LoopLawConfig {
   real dt = 0.001;          // loop period (s)
   real frame = 0.003;       // servo command frame period (s)
@@ -90,6 +137,10 @@ struct LoopLawConfig {
   real pm_min = 30.0;       // phase margin (deg), at least
   real ms_max = 2.0;        // max |S|, at most
   int spread = 0;           // 0: gains recomputed and applied in one tick (Python); m: spread over m ticks, applied m later
+  bool prune = true;        // 0.3.2: skip the rest of a candidate's sum once it cannot be chosen (the same gains)
+  bool quad = true;         // 0.3.2: |1 + L|^2 as a quadratic in Ki (the same gains: certified, else from L again)
+  real delta = 1e-9;        // 0.3.2: relative margin of the pruning bound and of quad's certificate, declared; at
+                            // least 1e-10 (far above the rounding bound 5e-13). Larger costs time, never changes gains
 };
 
 // N joints; PIPE = length of the nominal servo models' delay line in ticks, at least dead / dt + 2
@@ -110,7 +161,7 @@ class SyntonicLoopLaw {
   bool begin(const real q0[N], const real w0[N], const LoopLawConfig& c) {
     ready_ = false;
     if (!(c.dt > 0) || !(c.servo_tau > 0) || c.dead < 0 || c.every < 1 || c.nfit < 1 || c.spread < 0 ||
-        (c.spread > 0 && c.spread >= c.every))
+        (c.spread > 0 && c.spread >= c.every) || !(c.delta >= 1e-10))
       return false;
     real ndf = c.dead / c.dt;
     nd_ = (int)floor(ndf + 1e-9); fd_ = ndf - nd_;
@@ -134,6 +185,7 @@ class SyntonicLoopLaw {
       for (int h = 0; h < PIPE; h++) pc_[h][j] = pf_[h][j] = q0[j];
     }
     head_ = 0; ecnt_ = 0; k_ = 0; started = false; job_ = false;
+    phase_ = PH_DONE; prow_ = -1; pvalid_ = 0; evaluated_ = 0; fallbacks_ = 0; late_ = 0; margin_ = INFINITY;
     grid_();
     ready_ = true;
     return true;
@@ -161,7 +213,10 @@ class SyntonicLoopLaw {
       long s = k_ - job_k_;                                      // slice s of spread, s = 1 .. spread
       long target = (work_total_ * s + cfg_.spread - 1) / cfg_.spread;
       while (work_done_ < target && work_one_()) {}
-      if (s >= cfg_.spread) { while (work_one_()) {} apply_(); job_ = false; }
+      if (s >= cfg_.spread) {                                    // the last slice: whatever is left
+        if (phase_ != PH_DONE) { late_++; while (work_one_()) {} }
+        apply_(); job_ = false;
+      }
     }
     real e[N];
     for (int j = 0; j < N; j++) { e[j] = q[j] - y[j]; esum_[j] += e[j]; }
@@ -197,6 +252,59 @@ class SyntonicLoopLaw {
   real limit(int j) const { return lim_[j]; }         // authority limit servo_tau x w0 (rad)
   real delay() const { return D_; }                   // loop delay of the model, loop_delay(dt, frame) + dead (s)
   bool pending() const { return job_; }               // spread: a recomputation is under way
+  int spread() const { return cfg_.spread; }          // the spread in use
+  // 0.3.2: what the last recomputation evaluated, in (candidate, frequency) points, and the same without the speed-ups
+  long points_evaluated() const { return evaluated_; }
+  long points_total() const { return (long)nok_ * LOOP_NW; }
+  long fallbacks() const { return fallbacks_; }       // recomputations done again from L (not certified, or a NaN)
+  long late() const { return late_; }                 // spread: recomputations not finished before their last slice
+  // the smallest relative gap seen between the best J and the next among the candidates evaluated to the end (with
+  // prune, the next is often dropped early: then this is larger than the true gap)
+  real tie_margin() const { return margin_; }
+
+  // 0.3.2, scheduling. The time one robust candidate's 1500 points take on this board, in seconds, by the caller's
+  // clock: now() returns a count that increases hz times a second (on a Teensy, the cycle counter ARM_DWT_CYCCNT and
+  // F_CPU_ACTUAL). With the options of begin() (quad or not). Call after begin(), not during a recomputation; returns
+  // the shortest of reps runs, or -1 if it cannot run.
+  template <class Now>
+  real time_candidate(Now now, real hz, int reps = 5) {
+    if (!ready_ || job_ || nok_ == 0 || !(hz > 0)) return -1;
+    for (int j = 0; j < N; j++)                                  // a typical spectrum: gamma 3, corner 1 rad/s
+      for (int w = 0; w < LOOP_NW; w++) PhiW_[j][w] = 1e-6 * pow(W2_[w] + 1.0, -2.0) * dWf_[w];
+    const int c = okc_[nok_ / 2];
+    quad_now_ = cfg_.quad; prow_ = c / LOOP_NKI; pvalid_ = 0;
+    if (quad_now_) for (int b = 0; b < LOOP_NB; b++) { row_(prow_, b); pvalid_++; }   // P ready: the candidate alone is timed
+    real best = -1;
+    for (int r = 0; r < reps; r++) {
+      for (int j = 0; j < N; j++) Jp_[j] = 0.0;
+      const decltype(now()) t0 = now();
+      for (int b = 0; b < LOOP_NB; b++) block_(c, b);
+      const decltype(now()) t1 = now();
+      const real sec = (real)(decltype(now()))(t1 - t0) / hz;
+      if (best < 0 || sec < best) best = sec;
+    }
+    sink_ = Jp_[0]; prow_ = -1; work_done_ = 0; evaluated_ = 0;
+    return best;
+  }
+  // The smallest spread whose share of the recomputation takes at most `budget` seconds per tick (on top of the
+  // ordinary tick), given the time of one candidate (time_candidate()). The work is counted as if nothing were pruned,
+  // so the budget holds in every recomputation. 0 if the whole recomputation fits in one tick, -1 if no spread below
+  // `every` fits. A scheduling choice from a measured cost and a declared budget, not a tuned parameter.
+  int spread_for(real seconds_per_candidate, real budget) const {
+    if (!ready_ || !(seconds_per_candidate > 0) || !(budget > 0)) return -1;
+    const long U = work_bound_(N), item = ITEM_MAX;
+    const real unit = seconds_per_candidate / LOOP_NW;
+    if (U * unit <= budget) return 0;
+    for (int m = 1; m < cfg_.every; m++)
+      if ((real)((U + m - 1) / m + item) * unit <= budget) return m;
+    return -1;
+  }
+  // changes the spread between recomputations; false (and nothing changed) during one or if m is out of range
+  bool set_spread(int m) {
+    if (!ready_ || job_ || m < 0 || (m > 0 && m >= cfg_.every)) return false;
+    cfg_.spread = m;
+    return true;
+  }
 
  private:
   // frequency responses of the PI loop G = exp(-s D) / (servo_tau s + 1) over the candidate grid; robustness tests
@@ -210,6 +318,7 @@ class SyntonicLoopLaw {
       real cr = cos(W[w] * D_), ci = -sin(W[w] * D_), dr = 1.0, di = W[w] * ts_;   // exp(-s D) / (1 + s ts)
       real m = dr * dr + di * di;
       Gr_[w] = (cr * dr + ci * di) / m; Gi_[w] = (ci * dr - cr * di) / m;
+      Q_[w] = 2.0 * (Gi_[w] * iW_[w]); R_[w] = (iW_[w] * iW_[w]) * (Gr_[w] * Gr_[w] + Gi_[w] * Gi_[w]);   // 0.3.2
     }
     kp_[0] = 0.0;
     for (int i = 1; i < LOOP_NKP; i++) kp_[i] = loop_geom(0.05, 12.0, LOOP_NKP - 1, i - 1);
@@ -233,7 +342,12 @@ class SyntonicLoopLaw {
       ok_[c] = pm >= cfg_.pm_min && s2max <= ms2 && L0 > 1.0;
       if (ok_[c]) { okc_[nok_] = (short)c; MTr_[nok_] = mtr; nok_++; }
     }
-    work_total_ = (long)LOOP_NW * PHI_COST * N + (long)nok_ * LOOP_NW;
+    nrows_ = 0;
+    for (int i = 0; i < LOOP_NKP; i++) {
+      bool any = false;
+      for (int k = 0; k < LOOP_NKI; k++) any = any || ok_[i * LOOP_NKI + k];
+      if (any) nrows_++;
+    }
   }
 
   // block-mean (Hadamard) identification of the error the loop must cancel: second differences of adjacent block
@@ -298,52 +412,165 @@ class SyntonicLoopLaw {
     return s;
   }
 
-  // the recomputation as a list of work items of LOOP_FB frequencies each: first the spectrum (Phi of every joint),
-  // then, candidate after candidate, its J of every joint, summed over the 1500 frequencies in order. The order of the
-  // arithmetic does not depend on how the items are divided between ticks.
+  // The recomputation as a list of work items: the spectrum (Phi of every joint, 10 frequencies of one joint per item);
+  // with prune, the candidates in use (each once); then the robust candidates in index order. A candidate's J is summed
+  // over the 1500 frequencies in order, 50 per item; with quad, the item first fills those 50 frequencies of the Kp
+  // row's P if no candidate of the row has reached them yet. The order of the arithmetic does not depend on how the
+  // items are divided between ticks. Work units: one (candidate, frequency) point; the weights are for load balance only.
   static const int LOOP_FB = 50, LOOP_NB = LOOP_NW / LOOP_FB;   // 30 blocks of 50 frequencies
-  static const int PHI_COST = 8;   // a spectrum point per joint, in (candidate, frequency) units; load balance only
+  static const int SPEC_FB = 10;     // frequencies of one joint's spectrum per item
+  static const int PHI_COST = 8;     // a spectrum point (a pow), in units
+  static const int ROW_UNITS = 30;   // 50 frequencies of a row's P (42 against 70 cycles a point by the Cortex-M7 model)
+  static const long ITEM_MAX = (long)SPEC_FB * PHI_COST > LOOP_FB + ROW_UNITS ? (long)SPEC_FB * PHI_COST : LOOP_FB + ROW_UNITS;
+  enum { PH_SPEC, PH_WARM, PH_SCAN, PH_DONE };
+
+  // the work of a recomputation in units, counted as if nothing were pruned, with nwarm candidates in use
+  long work_bound_(int nwarm) const {
+    long u = (long)LOOP_NW * PHI_COST * N + (long)nok_ * LOOP_NW;
+    if (cfg_.prune) u += (long)nwarm * LOOP_NW;
+    if (cfg_.quad) u += (long)(nrows_ + (cfg_.prune ? nwarm : 0)) * LOOP_NB * ROW_UNITS;
+    return u;
+  }
+
   void start_job_() {
-    for (int j = 0; j < N; j++) {
-      C_[j] = sA_[j] / loop_K_gamma(sg_[j]); ex_[j] = -(1 + sg_[j]) / 2; o2_[j] = sO_[j] * sO_[j];
-      bestJ_[j] = INFINITY; bnew_[j] = 0;
+    for (int j = 0; j < N; j++) { C_[j] = sA_[j] / loop_K_gamma(sg_[j]); ex_[j] = -(1 + sg_[j]) / 2; o2_[j] = sO_[j] * sO_[j]; }
+    nwarm_ = 0;
+    if (cfg_.prune)
+      for (int j = 0; j < N; j++) {                              // the candidates in use, each once, if robust
+        const int c = best_[j];
+        if (c < 0 || !ok_[c]) continue;
+        bool seen = false;
+        for (int k = 0; k < nwarm_; k++) seen = seen || warmc_[k] == c;
+        if (!seen) { warmc_[nwarm_] = c; warmp_[nwarm_] = pos_(c); nwarm_++; }
+      }
+    work_total_ = work_bound_(nwarm_); work_done_ = 0; evaluated_ = 0;
+    phase_ = PH_SPEC; item_ = 0; nan_ = false;
+  }
+
+  // a pass over the candidates: by the quadratic form or from L; a NaN in the spectrum or the noise turns both
+  // speed-ups off (the partial sums are then not monotone), as 0.3.1
+  void begin_pass_(bool quad) {
+    quad_now_ = quad && !nan_; prune_now_ = cfg_.prune && !nan_;
+    for (int j = 0; j < N; j++) { b1_[j] = INFINITY; b2_[j] = INFINITY; c1_[j] = 0; bw_[j] = INFINITY; }
+    p_ = 0; blk_ = 0; wk_ = 0; prow_ = -1;
+    if (prune_now_ && nwarm_ > 0) phase_ = PH_WARM;
+    else { phase_ = PH_SCAN; advance_(); }
+  }
+
+  // to the scan's next candidate: those in use are not evaluated twice; after the last, the end of the pass
+  void advance_() {
+    while (p_ < nok_) {
+      int k = -1;
+      for (int i = 0; i < nwarm_ && prune_now_; i++) if (warmp_[i] == p_) k = i;
+      if (k < 0) return;
+      complete_(okc_[p_], warmJ_[k]); p_++;
     }
-    item_ = 0; work_done_ = 0;
+    end_pass_();
+  }
+
+  // the choice: certified if the next J exceeds the best by more than delta (needed with quad only)
+  void end_pass_() {
+    bool cert = true;
+    for (int j = 0; j < N; j++) {
+      if (!(b2_[j] > b1_[j] * (1.0 + cfg_.delta))) cert = false;
+      const real m = (b2_[j] - b1_[j]) / fabs(b1_[j]);
+      if (m < margin_) margin_ = m;
+    }
+    if (quad_now_ && !cert) { fallbacks_++; begin_pass_(false); return; }
+    phase_ = PH_DONE;
+  }
+
+  void complete_(int c, const real* J) {                         // the first smallest J, as numpy.argmin
+    for (int j = 0; j < N; j++) {
+      const real v = J[j];
+      if (v < b1_[j] || (v != v && b1_[j] == b1_[j])) { b2_[j] = b1_[j]; b1_[j] = v; c1_[j] = c; }
+      else if (v < b2_[j]) b2_[j] = v;
+    }
+  }
+
+  void row_(int i, int blk) {                                    // P of Kp row i, block blk
+    const real kp = kp_[i];
+    for (int w = blk * LOOP_FB; w < (blk + 1) * LOOP_FB; w++)
+      P_[w] = 1.0 + kp * (2.0 * Gr_[w] + kp * (Gr_[w] * Gr_[w] + Gi_[w] * Gi_[w]));
+    work_done_ += ROW_UNITS;
+  }
+
+  void block_(int c, int blk) {
+    const int w0 = blk * LOOP_FB, w1 = w0 + LOOP_FB;
+    if (quad_now_) {
+      if (c / LOOP_NKI != prow_) { prow_ = c / LOOP_NKI; pvalid_ = 0; }
+      if (blk == pvalid_) { row_(prow_, blk); pvalid_++; }       // the blocks are reached in order
+    }
+    if (quad_now_) loop_block_quad<N>(ki_[c % LOOP_NKI], P_, Q_, R_, PhiW_, w0, w1, Jp_);
+    else loop_block_L<N>(kp_[c / LOOP_NKI], ki_[c % LOOP_NKI], iW_, Gr_, Gi_, PhiW_, w0, w1, Jp_);
+    work_done_ += LOOP_FB; evaluated_ += LOOP_FB;
+  }
+
+  int pos_(int c) const {                                        // position of robust candidate c in okc_
+    int lo = 0, hi = nok_ - 1;
+    while (lo <= hi) { const int m = (lo + hi) / 2; if (okc_[m] == c) return m; if (okc_[m] < c) lo = m + 1; else hi = m - 1; }
+    return -1;
   }
 
   bool work_one_() {
-    if (item_ < LOOP_NB) {
-      for (int w = item_ * LOOP_FB; w < (item_ + 1) * LOOP_FB; w++)
-        for (int j = 0; j < N; j++) PhiW_[j][w] = C_[j] * pow(W2_[w] + o2_[j], ex_[j]) * dWf_[w];
-      work_done_ += (long)LOOP_FB * PHI_COST * N;
-    } else if (item_ < LOOP_NB * (1 + nok_)) {
-      const int q = item_ - LOOP_NB, p = q / LOOP_NB, blk = q % LOOP_NB, c = okc_[p];
-      const real kp = kp_[c / LOOP_NKI], ki = ki_[c % LOOP_NKI];
-      real J[N];
-      for (int j = 0; j < N; j++) J[j] = blk == 0 ? 0.0 : Jacc_[j];
-      for (int w = blk * LOOP_FB; w < (blk + 1) * LOOP_FB; w++) {
-        real kiw = ki * iW_[w];
-        real Lr = kp * Gr_[w] + kiw * Gi_[w], Li = kp * Gi_[w] - kiw * Gr_[w];
-        real s2 = 1.0 / ((1.0 + Lr) * (1.0 + Lr) + Li * Li);   // |S|^2
-        for (int j = 0; j < N; j++) J[j] += PhiW_[j][w] * s2;
+    if (phase_ == PH_SPEC) {
+      const int blk = item_ / N, j = item_ % N;
+      for (int w = blk * SPEC_FB; w < (blk + 1) * SPEC_FB; w++) {
+        const real v = C_[j] * pow(W2_[w] + o2_[j], ex_[j]) * dWf_[w];
+        PhiW_[j][w] = v;
+        if (v != v) nan_ = true;
       }
-      for (int j = 0; j < N; j++) Jacc_[j] = J[j];
-      if (blk == LOOP_NB - 1) {
+      work_done_ += (long)SPEC_FB * PHI_COST;
+      if (++item_ == LOOP_NW / SPEC_FB * N) {
+        for (int i = 0; i < N; i++) if (r_[i] != r_[i]) nan_ = true;
+        if (nan_) fallbacks_++;
+        begin_pass_(cfg_.quad);
+      }
+      return true;
+    }
+    if (phase_ == PH_WARM) {
+      const int c = warmc_[wk_];
+      if (blk_ == 0) for (int j = 0; j < N; j++) Jp_[j] = 0.0;
+      block_(c, blk_);
+      if (++blk_ == LOOP_NB) {
         for (int j = 0; j < N; j++) {
-          real Jj = J[j] + r_[j] * MTr_[p];
-          if (Jj < bestJ_[j] || (Jj != Jj && bestJ_[j] == bestJ_[j])) { bestJ_[j] = Jj; bnew_[j] = c; }   // first minimum
+          const real v = Jp_[j] + r_[j] * MTr_[warmp_[wk_]];
+          warmJ_[wk_][j] = v;
+          if (v < bw_[j]) bw_[j] = v;
+        }
+        blk_ = 0;
+        if (++wk_ == nwarm_) { phase_ = PH_SCAN; advance_(); }
+      }
+      return true;
+    }
+    if (phase_ == PH_SCAN) {
+      const int c = okc_[p_];
+      if (blk_ == 0) {
+        for (int j = 0; j < N; j++) {
+          Jp_[j] = 0.0; out_[j] = false;
+          thr_[j] = (bw_[j] < b1_[j] ? bw_[j] : b1_[j]) * (1.0 + cfg_.delta);   // the bound
         }
       }
-      work_done_ += LOOP_FB;
-    } else {
-      return false;
+      block_(c, blk_);
+      blk_++;
+      if (prune_now_) {                                          // dropped once no joint can choose it
+        bool all = true;
+        for (int j = 0; j < N; j++)
+          if (!out_[j]) { if (Jp_[j] + r_[j] * MTr_[p_] > thr_[j]) out_[j] = true; else all = false; }
+        if (all) { p_++; blk_ = 0; advance_(); return true; }
+      }
+      if (blk_ == LOOP_NB) {
+        real J[N];
+        for (int j = 0; j < N; j++) J[j] = Jp_[j] + r_[j] * MTr_[p_];
+        complete_(c, J); p_++; blk_ = 0; advance_();
+      }
+      return true;
     }
-    item_++;
-    return true;
+    return false;
   }
 
   void apply_() {
-    for (int j = 0; j < N; j++) { best_[j] = bnew_[j]; Kp[j] = grid_kp(bnew_[j]); Ki[j] = grid_ki(bnew_[j]); }
+    for (int j = 0; j < N; j++) { best_[j] = c1_[j]; Kp[j] = grid_kp(c1_[j]); Ki[j] = grid_ki(c1_[j]); }
   }
 
   LoopLawConfig cfg_;
@@ -361,10 +588,19 @@ class SyntonicLoopLaw {
   real W2_[LOOP_NW], iW_[LOOP_NW], Gr_[LOOP_NW], Gi_[LOOP_NW], dWf_[LOOP_NW];
   real kp_[LOOP_NKP], ki_[LOOP_NKI], MTr_[LOOP_NC];
   bool ok_[LOOP_NC]; short okc_[LOOP_NC];
+  real Q_[LOOP_NW], R_[LOOP_NW], P_[LOOP_NW];   // the quadratic form: per frequency, and P of the Kp row prow_
+  int nrows_;
   // recomputation
-  real sA_[N], sg_[N], sO_[N], r_[N], C_[N], ex_[N], o2_[N], bestJ_[N], Jacc_[N];
-  int best_[N], bnew_[N];
+  real sA_[N], sg_[N], sO_[N], r_[N], C_[N], ex_[N], o2_[N];
+  int best_[N];
   real PhiW_[N][LOOP_NW];
+  int phase_, prow_, pvalid_, p_, blk_, wk_, nwarm_;
+  bool nan_, quad_now_, prune_now_;
+  int warmc_[N], warmp_[N], c1_[N];
+  bool out_[N];
+  real warmJ_[N][N], bw_[N], b1_[N], b2_[N], thr_[N], Jp_[N];
+  long evaluated_, fallbacks_, late_;
+  real margin_, sink_;
 };
 
 }  // namespace syntonic

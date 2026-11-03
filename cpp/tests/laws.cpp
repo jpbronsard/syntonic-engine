@@ -3,10 +3,14 @@
 //
 // The two laws of 0.3.0 in C++ (0.3.1): the loop law's facts, its gains on the robust grid in a closed loop, the
 // option spread (the same gains, m ticks later); the attitude law's facts, its prediction and update against the
-// textbook formulas, the arming covariance. Their agreement with Python is checked by replay_laws.cpp.
+// textbook formulas, the arming covariance. Since 0.3.2 the two speed-ups of the gain recomputation (the same commands
+// at every tick with them off and on, and with the fallback forced) and the scheduling helpers. Their agreement with
+// Python is checked by replay_laws.cpp.
 //   g++ -O2 -std=c++11 -Wall -Wextra -pedantic -Icpp cpp/tests/laws.cpp -o laws_cpp && ./laws_cpp
 #include <cmath>
+#include <chrono>
 #include <cstdio>
+#include <vector>
 #include "SyntonicLoopLaw.h"
 #include "RiccatiAttitudeLaw.h"
 
@@ -17,7 +21,8 @@ static double gauss() { return std::sqrt(-2.0 * std::log(unif())) * std::cos(2 *
 
 // two joints, 1 kHz, 3 ms frames, a 25 ms servo with 2 ms of delay, a random-walk disturbance, two noisy reads
 template <int N>
-static void closed_loop(syntonic::SyntonicLoopLaw<N>& law, long ticks, int* first_index = 0, long* first_tick = 0) {
+static void closed_loop(syntonic::SyntonicLoopLaw<N>& law, long ticks, int* first_index = 0, long* first_tick = 0,
+                        std::vector<double>* trace = 0) {
   double th[N], dist[N], pipe[3][N], latched[N], q[N], qd[N], a[N], b[N];
   for (int j = 0; j < N; j++) { th[j] = latched[j] = dist[j] = 0; for (int h = 0; h < 3; h++) pipe[h][j] = 0; }
   if (first_tick) *first_tick = -1;
@@ -32,6 +37,7 @@ static void closed_loop(syntonic::SyntonicLoopLaw<N>& law, long ticks, int* firs
     bool send = k % 3 == 0;
     const double* cmd = law.step(q, qd, a, b, send);
     if (first_tick && *first_tick < 0 && law.gain_index(0) >= 0) { *first_tick = k; *first_index = law.gain_index(0); }
+    if (trace) for (int j = 0; j < N; j++) trace->push_back(cmd[j]);
     for (int j = 0; j < N; j++) {
       if (send) latched[j] = cmd[j];
       double u = pipe[k % 3][j]; pipe[k % 3][j] = latched[j];          // 2 ticks of delay
@@ -50,6 +56,8 @@ int main() {
     if (small.begin(q0, w0, c)) bad++;
     syntonic::LoopLawConfig s; s.spread = 500;                              // spread must be < every
     if (small.begin(q0, w0, s)) bad++;
+    syntonic::LoopLawConfig dl; dl.delta = 1e-12;                           // below the rounding bound
+    if (small.begin(q0, w0, dl)) bad++;
     syntonic::LoopLawConfig d;
     if (!small.begin(q0, w0, d) || std::fabs(small.L - (0.025 + 0.0015 + 0.0005 + 1e-4)) > 1e-15) bad++;
     if (std::fabs(small.limit(1) - 0.025 * 6) > 1e-15) bad++;
@@ -75,6 +83,37 @@ int main() {
     rs = 88172645463325252ULL; int i1 = -1; long k1 = -1;
     closed_loop(spread, 4000, &i1, &k1);
     if (i1 != i0 || k1 != k0 + ms[i]) { bad++; std::printf("spread %d: first gains %d at tick %ld, not %d at %ld\n", ms[i], i1, k1, i0, k0 + ms[i]); }
+  }
+  // ---- 0.3.2: the speed-ups give the same commands at every tick: off and on, and with every choice falling back
+  std::vector<double> ref;
+  {
+    syntonic::LoopLawConfig cr = c; cr.prune = false; cr.quad = false;    // the scan of 0.3.1
+    law.begin(q0, w0, cr); rs = 88172645463325252ULL; closed_loop(law, 4000, 0, 0, &ref);
+  }
+  long recs = 0;
+  for (int mode = 1; mode < 5; mode++) {
+    syntonic::LoopLawConfig cm = c; cm.prune = mode & 1 || mode == 4; cm.quad = mode & 2 || mode == 4;
+    if (mode == 4) cm.delta = 1e3;
+    std::vector<double> tr;
+    law.begin(q0, w0, cm); rs = 88172645463325252ULL; closed_loop(law, 4000, 0, 0, &tr);
+    if (tr != ref) { bad++; std::printf("prune %d quad %d delta %g: the commands differ\n", cm.prune, cm.quad, cm.delta); }
+    if (mode == 3 && (law.fallbacks() != 0 || !(law.points_evaluated() < law.points_total()))) bad++;
+    if (mode == 3) recs = (4000 - k0 + c.every - 1) / c.every;            // recomputations from tick k0 on
+    if (mode == 4 && law.fallbacks() != recs) { bad++; std::printf("forced: %ld fallbacks, not %ld\n", law.fallbacks(), recs); }
+  }
+  // ---- 0.3.2: scheduling
+  {
+    syntonic::LoopLawConfig cd = c; law.begin(q0, w0, cd);
+    const double cand = 1500 * 70 / 600e6;                               // 70 cycles per point at 600 MHz
+    const int m = law.spread_for(cand, 0.00045);
+    if (!(m > 0 && m < 500) || law.spread_for(cand, 10.0) != 0 || law.spread_for(cand, 1e-5) != -1) bad++;
+    if (!law.set_spread(m) || law.spread() != m || law.set_spread(500) || law.spread() != m) bad++;
+    typedef std::chrono::steady_clock SC;
+    double t = law.time_candidate([]() { return (unsigned long long)SC::now().time_since_epoch().count(); },
+                                  (double)SC::period::den / SC::period::num);
+    if (!(t > 0 && t < 0.1)) bad++;
+    std::printf("loop law, scheduling: one candidate %.1f us on this machine; at 70 cycles per point on a Teensy 4.1, "
+                "spread %d for 0.45 ms per tick\n", t * 1e6, m);
   }
   std::printf("loop law: %s (%d robust candidates, first gains Kp %.4g Ki %.4g at tick %ld)\n", bad ? "FAIL" : "ok",
               law.robust_count(), law.grid_kp(i0), law.grid_ki(i0), k0);

@@ -12,10 +12,14 @@ confirmation runs exactly (difference 0.0):
   all     in addition the LAW column of all 90 servo runs (the law alone in the harness) and LAW_R, LAW_Rqb4 in all
           60 flights of confirmation 3 (about 25 minutes on one core)
 
+  --scan  (0.3.2) the servo runs with syntonic_engine.ScanLoopLaw in place of SyntonicLoopLaw: the gains found as the
+          C++ and Rust laws find them, with the two speed-ups of 0.3.2 (pruning, the quadratic form). They must
+          reproduce the same recorded runs exactly; prints the share of the points evaluated and the fallbacks.
+
 The flight harness names absolute paths of the working session: run replay_setup.sh first (see NOTE.md). The servo
 harness needs scipy. Seeds 500-509 are reserved for confirmation 3, which is complete; this check sets
 GOAL_ALLOW_CONFIRM3=1 for itself only.
-Run: python3 package_gate.py [servo | flight | all]
+Run: python3 package_gate.py [servo | flight | all] [--scan]
 """
 import os, sys, json, time
 import numpy as np
@@ -23,10 +27,20 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, os.path.join(REPO, 'python'))
-from syntonic_engine import SyntonicLoopLaw, RiccatiAttitudeLaw  # noqa: E402
+from syntonic_engine import SyntonicLoopLaw, RiccatiAttitudeLaw, ScanLoopLaw  # noqa: E402
 
-MODE = sys.argv[1] if len(sys.argv) > 1 else 'default'
+SCAN = '--scan' in sys.argv
+ARGS = [a for a in sys.argv[1:] if a != '--scan']
+MODE = ARGS[0] if ARGS else 'default'
 OUT = {}
+LAWS = []                                      # with --scan: the ScanLoopLaw instances, for their statistics
+
+
+def loop_law(q0, w0, **kw):
+    if not SCAN:
+        return SyntonicLoopLaw(q0, w0, **kw)
+    law = ScanLoopLaw(q0, w0, **kw); LAWS.append(law)
+    return law
 
 
 def report(name, got, ref):
@@ -40,7 +54,7 @@ def servo(all_runs):
     import realistic_bench as RB, rivals as RV
     S = os.path.join(HERE, 'servo')
     T = json.load(open(os.path.join(S, 'results_servo', 'tuned.json')))
-    law = ('LAW', lambda q0, w0: SyntonicLoopLaw(q0, w0, dt=RB.DT, frame=RB.FRAME, servo_tau=RB.TS_NOM, dead=0.0025))
+    law = ('LAW', lambda q0, w0: loop_law(q0, w0, dt=RB.DT, frame=RB.FRAME, servo_tau=RB.TS_NOM, dead=0.0025))
     ctr = [('PIDLM', {n: RV.pid_factory(np.array(T['leadmean']['gains'][n]), lead=True, p_mean=True) for n in 'AB'}),
            ('PIDL', {n: RV.pid_factory(np.array(T['lead']['gains'][n]), lead=True, p_mean=False) for n in 'AB'}), law]
     rows = {}
@@ -98,6 +112,11 @@ if __name__ == '__main__':
         servo(MODE == 'all')
     if MODE in ('default', 'flight', 'all'):
         flight(MODE == 'all')
+    if SCAN and LAWS:
+        st = [x for law in LAWS for x in law.stats]
+        print(f'ScanLoopLaw: {len(LAWS)} law(s), {len(st)} recomputations, points evaluated '
+              f'{np.mean([x["points"] / x["total"] for x in st]):.1%} (largest {max(x["points"] / x["total"] for x in st):.1%}), '
+              f'fallbacks {sum(law.fallbacks for law in LAWS)}, smallest gap best-next J seen {min(x["margin"] for x in st):.2e}')
     worst = max(abs(v) for v in OUT.values())
     print(f'{len(OUT)} values, largest difference {worst:.3e}:', 'PASS (exact)' if worst == 0.0 else 'FAIL',
           f'({time.time() - t:.0f} s)')

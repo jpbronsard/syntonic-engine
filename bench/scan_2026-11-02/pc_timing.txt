@@ -1,0 +1,20 @@
+# sh bench/scan_2026-11-02/pc_timing.sh replay_loop_bench2.bin replay_loop_bench.bin replay_loop_two.bin (REPS=5), 2 Nov 2026,
+# Xeon 2.8 GHz shared with two other jobs, g++ 13 -O2 -ffp-contract=off; 0.3.1 = cpp/SyntonicLoopLaw.h at 5073c27, pPqQ = prune P, quad Q
+== replay_loop_bench2.bin
+  0.3.1  2 joint(s), 878 robust candidates, 63 recomputations: mean 4.226 ms, largest 6.970 ms; ordinary tick 0.45 us
+  p0q0   2 joint(s), 878 robust candidates, 63 recomputations: mean 2.787 ms, largest 6.939 ms; ordinary tick 0.38 us
+  p1q0   2 joint(s), 878 robust candidates, 63 recomputations: mean 1.109 ms, largest 1.576 ms; ordinary tick 0.29 us
+  p0q1   2 joint(s), 878 robust candidates, 63 recomputations: mean 1.948 ms, largest 2.185 ms; ordinary tick 0.31 us
+  p1q1   2 joint(s), 878 robust candidates, 63 recomputations: mean 0.838 ms, largest 1.070 ms; ordinary tick 0.27 us
+== replay_loop_bench.bin
+  0.3.1  6 joint(s), 878 robust candidates, 63 recomputations: mean 6.897 ms, largest 13.010 ms; ordinary tick 1.23 us
+  p0q0   6 joint(s), 878 robust candidates, 63 recomputations: mean 5.816 ms, largest 10.022 ms; ordinary tick 0.93 us
+  p1q0   6 joint(s), 878 robust candidates, 63 recomputations: mean 2.940 ms, largest 4.173 ms; ordinary tick 0.86 us
+  p0q1   6 joint(s), 878 robust candidates, 63 recomputations: mean 4.662 ms, largest 4.992 ms; ordinary tick 0.90 us
+  p1q1   6 joint(s), 878 robust candidates, 63 recomputations: mean 2.353 ms, largest 3.597 ms; ordinary tick 0.77 us
+== replay_loop_two.bin
+  0.3.1  2 joint(s), 935 robust candidates, 21 recomputations: mean 4.218 ms, largest 5.215 ms; ordinary tick 0.30 us
+  p0q0   2 joint(s), 935 robust candidates, 21 recomputations: mean 2.822 ms, largest 2.886 ms; ordinary tick 0.28 us
+  p1q0   2 joint(s), 935 robust candidates, 21 recomputations: mean 1.660 ms, largest 2.716 ms; ordinary tick 0.28 us
+  p0q1   2 joint(s), 935 robust candidates, 21 recomputations: mean 2.020 ms, largest 2.069 ms; ordinary tick 0.30 us
+  p1q1   2 joint(s), 935 robust candidates, 21 recomputations: mean 1.249 ms, largest 2.014 ms; ordinary tick 0.28 us

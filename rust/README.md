@@ -42,7 +42,7 @@ use syntonic_engine::{AttitudeConfig, AttitudeLevel, LoopLawConfig, RiccatiAttit
 
 // a servo joint's PI gains, recomputed every 0.5 s from the live statistics; dead = the servo's delay, measured once
 let cfg = LoopLawConfig { dt: 0.001, frame: 0.003, servo_tau: 0.025, dead: 0.0025, ..LoopLawConfig::default() };
-let mut law: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&q0, &w0, cfg));   // about 114 KB: not on the stack
+let mut law: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&q0, &w0, cfg));   // about 150 KB: not on the stack
 let cmd = law.step(&q_plan, &qd_plan, &read_a, &read_b, frame_now);                    // every tick
 
 // a one-axis attitude estimator; per level of the known input that changes the noise (throttle), the facts measured once
@@ -54,14 +54,14 @@ let theta = att.step(gyro, tilt, 1);   // every gyro sample; tilt: Option<f64>, 
 // att.arm() at the end of the ground calibration; from then on pass the gyro with the calibration subtracted
 ```
 
-The loop law's gain recomputation evaluates about 1.3 million complex responses. With `LoopLawConfig::spread = 0` (the default) it runs in one tick, as in Python: about 4 ms for two joints on our PC, and by LLVM's Cortex-M7 model about 0.2 to 0.3 s on a Teensy 4.1. `spread = m` divides it over the m ticks that follow; the gains are the same but take effect m ticks later, which raises the tip error on the realistic MAESTRO 1 bench by about 1.5 to 2 % at m = 250 and 4 to 5 % at m = 499 (`bench/port_2026-11-02/`).
+The loop law's gain recomputation evaluates up to about 1.3 million complex responses. Since 0.3.2 two speed-ups that leave the chosen gains unchanged are on by default: `LoopLawConfig::prune` stops a candidate's sum once it can no longer be chosen, and `LoopLawConfig::quad` computes |1 + L|^2 as a quadratic in Ki (a choice is kept only when the next candidate is more than `delta` = 1e-9 behind, otherwise it is made again from L). Their Python reference is `python/syntonic_engine/loop_scan.py`. With `spread = 0` (the default) the recomputation runs in one tick, as in Python: for two joints on the realistic MAESTRO 1 bench about 0.8 ms on our PC in C++ (4.2 ms in 0.3.1), and by LLVM's Cortex-M7 model about 0.07 s on a Teensy 4.1 on average, 0.16 s when nothing can be skipped (0.21 s in 0.3.1). `spread = m` divides it over the m ticks that follow, counted as if nothing were skipped; the gains are the same but take effect m ticks later, which raises the tip error on that bench by about 1.5 to 2 % at m = 250, 2.5 to 3.3 % at m = 365 and 4 to 5 % at m = 499 (`bench/port_2026-11-02/`, `bench/scan_2026-11-02/`). `time_candidate()` times one candidate on the board by a 32-bit clock such as the cycle counter, and `spread_for()` gives the smallest spread whose share fits a declared time per tick (by the model, 365 for 0.45 ms with two joints).
 
 `tools/make_law_replay_log.py` runs the two Python laws on deterministic inputs and records every tick; the replay example compares the Rust laws with them:
 
 ```
 python rust/tools/make_law_replay_log.py              # from the repository root; add --flight-bench for the flight replay
 cd rust && cargo run --release --example replay_laws -- ../replay_loop_bench.bin ../replay_loop_bench_spread.bin \
-        ../replay_loop_two.bin ../replay_loop_one.bin ../replay_att_synth.bin
+        ../replay_loop_bench2.bin ../replay_loop_two.bin ../replay_loop_one.bin ../replay_att_synth.bin
 ```
 
-On our machine the loop law chose the same gains as Python at every tick of every replay (also with `spread = 400`), and its other outputs agreed to 2.4e-13 of their scale; the attitude law agreed exactly (difference 0.0), also on the realistic flight bench.
+On our machine the loop law chose the same gains as Python at every tick of every replay (also with `spread = 400`), and its other outputs agreed to 2.4e-13 of their scale; the attitude law agreed exactly (difference 0.0), also on the realistic flight bench. Since 0.3.2 each loop log is replayed five times: the speed-ups off, each alone, both, and both with `delta` = 1e3, which makes every choice fall back. The gains were Python's at every tick in all five, with no fallback in the first four.

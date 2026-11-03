@@ -18,17 +18,33 @@
 //! integral accumulates Ki e dt every tick (frozen at the authority limit servo_tau x w0); on a frame tick the
 //! proportional term uses the mean error since the last frame; command = q + L x qd + clip(Kp e_mean + I, +-limit).
 //!
-//! The gain recomputation evaluates J for every robust candidate (about 900 to 1250 of the 2460) over the 1500
-//! frequencies, about 1.3 million complex evaluations for all joints together. The frequency responses are recomputed
-//! each time from 60 KB of per-frequency constants rather than stored (30 MB), so the law takes about 90 KB + 12 KB per
-//! joint. `LoopLawConfig::spread` = 0 (default) recomputes and applies the gains in the tick where the Python law does:
-//! 4 to 8 ms for two joints on our PC, about 0.2 to 0.3 s on a Teensy 4.1 by LLVM's Cortex-M7 model. `spread` = m
-//! divides the work evenly over the m ticks that follow and applies the same gains m ticks later, which on the realistic
-//! MAESTRO 1 bench raises the tip error by about 1.5 to 2 % at m = 250 and 4 to 5 % at m = 499
-//! (`bench/port_2026-11-02/`).
+//! The gain recomputation evaluates J for the robust candidates (about 900 to 1250 of the 2460) over the 1500
+//! frequencies, up to about 1.3 million complex evaluations for all joints together. The frequency responses are
+//! recomputed each time from 84 KB of per-frequency constants rather than stored (30 MB), so the law takes about
+//! 125 KB + 13 KB per joint. Since 0.3.2 the scan is cheaper in two ways that leave the chosen gains unchanged (both on
+//! by default; their Python reference is `python/syntonic_engine/loop_scan.py`):
+//! - `LoopLawConfig::prune`: every term of J is positive, so a partial sum never decreases. The candidates in use are
+//!   evaluated first; every 50 frequencies a candidate is dropped once, for every joint, its partial J exceeds the
+//!   smaller of their J and the best J so far, times 1 + `delta` (1e-9): it cannot be chosen. On the replays this
+//!   evaluated 39 to 64 % of the points on average, but up to 96 % in one recomputation, so a per-tick budget cannot
+//!   count on it.
+//! - `LoopLawConfig::quad`: |1 + L|^2 = P + Ki (Q + Ki R), with P per Kp row and frequency, Q and R per frequency: four
+//!   operations and a division per point instead of ten and a division (70 instead of 97 cycles by LLVM's Cortex-M7
+//!   model). It changes J by rounding only (at most about 5e-13 relative for a robust candidate); the choice is
+//!   certified when the next J exceeds the best by more than `delta`, otherwise the scan is done again from L, as in
+//!   0.3.1 (a fallback, counted by `fallbacks()`; it never ran on the replays).
+//!
+//! `LoopLawConfig::spread` = 0 (default) recomputes and applies the gains in the tick where the Python law does: for two
+//! joints on the realistic MAESTRO 1 bench about 0.8 ms on our PC in C++ (4.2 ms in 0.3.1), and by LLVM's Cortex-M7
+//! model about 0.07 s on a Teensy 4.1 (0.16 s if nothing were pruned; 0.21 s in 0.3.1). `spread` = m divides the work,
+//! counted as if nothing were pruned, over the m ticks that follow and applies the same gains m ticks later, which on
+//! that bench raises the tip error by about 1.5 to 2 % at m = 250, 2.5 to 3.3 % at m = 365 and 4 to 5 % at m = 499
+//! (`bench/port_2026-11-02/`, `bench/scan_2026-11-02/`). `time_candidate()` measures the time of one candidate on the
+//! board and `spread_for()` gives the smallest spread whose share fits a declared time per tick (by the model, 365 for
+//! 0.45 ms with two joints and 878 candidates): a scheduling choice, opt-in.
 //!
 //! On the replays of `tools/make_law_replay_log.py` the robust candidates and the chosen gains agree with Python
-//! exactly at every tick, and the continuous values to 2.4e-13 of their scale.
+//! exactly at every tick, with the speed-ups off and on, and the continuous values to 2.4e-13 of their scale.
 
 // index loops mirror the arithmetic of the Python class, element by element
 #![allow(clippy::needless_range_loop, clippy::neg_cmp_op_on_partial_ord)]
@@ -47,7 +63,13 @@ pub const LOOP_NC: usize = LOOP_NKP * LOOP_NKI;
 const NLAG: usize = 8;
 const FB: usize = 50;        // frequencies per work item
 const NB: usize = LOOP_NW / FB;   // 30 blocks
-const PHI_COST: u64 = 8;     // a spectrum point per joint, in (candidate, frequency) units; load balance only
+const SPEC_FB: usize = 10;   // frequencies of one joint's spectrum per work item
+// work units: one (candidate, frequency) point; the weights are for load balance only
+const PHI_COST: u64 = 8;     // a spectrum point (a pow), in units
+const ROW_UNITS: u64 = 30;   // FB frequencies of a row's P (42 against 70 cycles a point by the Cortex-M7 model)
+const ITEM_MAX: u64 = if SPEC_FB as u64 * PHI_COST > FB as u64 + ROW_UNITS { SPEC_FB as u64 * PHI_COST } else { FB as u64 + ROW_UNITS };
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Phase { Spec, Warm, Scan, Done }
 
 /// Block-mean constant K(gamma) of the second difference of adjacent block means (K(3) = 11/20 exact), linear between
 /// the tabulated points as `numpy.interp`.
@@ -75,6 +97,37 @@ fn geom(a: f64, b: f64, n: usize, i: usize) -> f64 {
 #[inline]
 fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
     if x < lo { lo } else if x > hi { hi } else { x }
+}
+
+/// One block of frequencies `w0..w1` of one candidate, `j[i] += phiw[i][w] |S(w)|^2`, with |S|^2 from
+/// L = (kp + ki / jW) G, as in 0.3.1.
+#[inline]
+#[allow(clippy::too_many_arguments)]
+pub fn loop_block_l<const N: usize>(kp: f64, ki: f64, iw: &[f64; LOOP_NW], gr: &[f64; LOOP_NW], gi: &[f64; LOOP_NW],
+                                    phiw: &[[f64; LOOP_NW]; N], w0: usize, w1: usize, j: &mut [f64; N]) {
+    let mut jl = *j;
+    for w in w0..w1 {
+        let kiw = ki * iw[w];
+        let lr = kp * gr[w] + kiw * gi[w];
+        let li = kp * gi[w] - kiw * gr[w];
+        let s2 = 1.0 / ((1.0 + lr) * (1.0 + lr) + li * li);   // |S|^2
+        for i in 0..N { jl[i] += phiw[i][w] * s2; }
+    }
+    *j = jl;
+}
+
+/// The same by the quadratic form (0.3.2): |1 + L|^2 = P + ki (Q + ki R), P = 1 + kp (2 Re G + kp |G|^2) of the
+/// candidate's Kp row.
+#[inline]
+#[allow(clippy::too_many_arguments)]
+pub fn loop_block_quad<const N: usize>(ki: f64, p: &[f64; LOOP_NW], q: &[f64; LOOP_NW], r: &[f64; LOOP_NW],
+                                       phiw: &[[f64; LOOP_NW]; N], w0: usize, w1: usize, j: &mut [f64; N]) {
+    let mut jl = *j;
+    for w in w0..w1 {
+        let s2 = 1.0 / (p[w] + ki * (q[w] + ki * r[w]));        // |S|^2
+        for i in 0..N { jl[i] += phiw[i][w] * s2; }
+    }
+    *j = jl;
 }
 
 /// Facts and declared design constants of the loop law. Only `dt`, `frame`, `servo_tau` and `dead` describe your
@@ -109,19 +162,26 @@ pub struct LoopLawConfig {
     /// in the same tick, the work is spread evenly over the m ticks that follow, and the same gains take effect m ticks
     /// later (Rust and C++ only; its Python reference is `rust/tools/make_law_replay_log.py`).
     pub spread: u64,
+    /// 0.3.2: skip the rest of a candidate's sum once it cannot be chosen (the same gains).
+    pub prune: bool,
+    /// 0.3.2: |1 + L|^2 as a quadratic in Ki (the same gains: certified, else from L again).
+    pub quad: bool,
+    /// 0.3.2: relative margin of the pruning bound and of `quad`'s certificate, declared; at least 1e-10 (far above the
+    /// rounding bound 5e-13). A larger value costs time and never changes the gains.
+    pub delta: f64,
 }
 
 impl Default for LoopLawConfig {
     fn default() -> Self {
         LoopLawConfig {
             dt: 0.001, frame: 0.003, servo_tau: 0.025, dead: 0.0, lead: None, ema: 1.0, warmup: 1.0, gate: 2.0,
-            nfit: 3, every: 500, pm_min: 30.0, ms_max: 2.0, spread: 0,
+            nfit: 3, every: 500, pm_min: 30.0, ms_max: 2.0, spread: 0, prune: true, quad: true, delta: 1e-9,
         }
     }
 }
 
 /// The loop law for `N` joints. `PIPE` is the length of the nominal servo models' delay line in ticks and must be at
-/// least `dead / dt + 2`. It takes about 70 KB + 12 KB per joint: on a small board keep it in a `static`.
+/// least `dead / dt + 2`. It takes about 125 KB + 13 KB per joint: on a small board keep it in a `static`.
 pub struct SyntonicLoopLaw<const N: usize, const PIPE: usize = 16> {
     /// Proportional gain in use per joint (Python `Kp`).
     pub kp: [f64; N],
@@ -159,6 +219,7 @@ pub struct SyntonicLoopLaw<const N: usize, const PIPE: usize = 16> {
     work_total: u64,
     work_done: u64,
     item: usize,
+    phase: Phase,
     head: usize,
     ecnt: u64,
     nok: usize,
@@ -192,6 +253,11 @@ pub struct SyntonicLoopLaw<const N: usize, const PIPE: usize = 16> {
     mtr: [f64; LOOP_NC],
     ok: [bool; LOOP_NC],
     okc: [u16; LOOP_NC],
+    // the quadratic form: per frequency, and P of the Kp row `prow`
+    qf: [f64; LOOP_NW],
+    rf: [f64; LOOP_NW],
+    pf_row: [f64; LOOP_NW],
+    nrows: usize,
     // recomputation
     s_amp: [f64; N],
     s_gam: [f64; N],
@@ -200,11 +266,32 @@ pub struct SyntonicLoopLaw<const N: usize, const PIPE: usize = 16> {
     c_j: [f64; N],
     ex: [f64; N],
     o2: [f64; N],
-    best_j: [f64; N],
-    jacc: [f64; N],
     best: [i32; N],
-    bnew: [i32; N],
     phiw: [[f64; LOOP_NW]; N],
+    prow: usize,
+    pvalid: usize,
+    p: usize,
+    blk: usize,
+    wk: usize,
+    nwarm: usize,
+    nan: bool,
+    quad_now: bool,
+    prune_now: bool,
+    warmc: [usize; N],
+    warmp: [usize; N],
+    c1: [usize; N],
+    out: [bool; N],
+    warm_j: [[f64; N]; N],
+    bw: [f64; N],
+    b1: [f64; N],
+    b2: [f64; N],
+    thr: [f64; N],
+    jp: [f64; N],
+    evaluated: u64,
+    fallbacks: u64,
+    late: u64,
+    margin: f64,
+    sink: f64,
 }
 
 impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
@@ -215,6 +302,7 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
         assert!(cfg.dt > 0.0 && cfg.servo_tau > 0.0 && cfg.dead >= 0.0, "dt, servo_tau must be positive, dead not negative");
         assert!(cfg.every >= 1 && cfg.nfit >= 1, "every and nfit must be at least 1");
         assert!(cfg.spread == 0 || cfg.spread < cfg.every, "spread must be smaller than every");
+        assert!(cfg.delta >= 1e-10, "delta must be at least 1e-10");
         let dt = cfg.dt;
         let ndf = cfg.dead / dt;
         let nd = floor(ndf + 1e-9) as usize;
@@ -239,14 +327,19 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
             started: false, cfg,
             d: loop_delay(dt, cfg.frame, 1e-4) + cfg.dead,
             aw: dt / cfg.ema, fd, nd, warm: rint(cfg.warmup / dt) as u64, k: 0,
-            job: false, job_k: 0, work_total: 0, work_done: 0, item: 0, head: 0, ecnt: 0, nok: 0,
+            job: false, job_k: 0, work_total: 0, work_done: 0, item: 0, phase: Phase::Done, head: 0, ecnt: 0, nok: 0,
             w0: *w0, lim, n2: [0.0; N], esum: [0.0; N], cff: *q0, pc: [*q0; PIPE], pf: [*q0; PIPE],
             lag, cnt: [0; NLAG], nblk: [0; NLAG], nb: [0; NLAG], u, lu, ab,
             acc: [[0.0; N]; NLAG], m1: [[0.0; N]; NLAG], m2: [[0.0; N]; NLAG], s2: [[0.0; N]; NLAG],
             w2: [0.0; LOOP_NW], iw: [0.0; LOOP_NW], gr: [0.0; LOOP_NW], gi: [0.0; LOOP_NW], dwf: [0.0; LOOP_NW],
             kpv: [0.0; LOOP_NKP], kiv: [0.0; LOOP_NKI], mtr: [0.0; LOOP_NC], ok: [false; LOOP_NC], okc: [0; LOOP_NC],
+            qf: [0.0; LOOP_NW], rf: [0.0; LOOP_NW], pf_row: [0.0; LOOP_NW], nrows: 0,
             s_amp: [0.0; N], s_gam: [0.0; N], s_oc: [0.0; N], s_r: [0.0; N], c_j: [0.0; N], ex: [0.0; N],
-            o2: [0.0; N], best_j: [0.0; N], jacc: [0.0; N], best: [-1; N], bnew: [0; N], phiw: [[0.0; LOOP_NW]; N],
+            o2: [0.0; N], best: [-1; N], phiw: [[0.0; LOOP_NW]; N],
+            prow: usize::MAX, pvalid: 0, p: 0, blk: 0, wk: 0, nwarm: 0, nan: false, quad_now: false, prune_now: false,
+            warmc: [0; N], warmp: [0; N], c1: [0; N], out: [false; N], warm_j: [[0.0; N]; N], bw: [0.0; N],
+            b1: [0.0; N], b2: [0.0; N], thr: [0.0; N], jp: [0.0; N], evaluated: 0, fallbacks: 0, late: 0,
+            margin: f64::INFINITY, sink: 0.0,
         };
         law.grid();
         law
@@ -270,6 +363,8 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
             let m = dr * dr + di * di;
             self.gr[w] = (cr * dr + ci * di) / m;
             self.gi[w] = (ci * dr - cr * di) / m;
+            self.qf[w] = 2.0 * (self.gi[w] * self.iw[w]);                   // 0.3.2: the quadratic form
+            self.rf[w] = (self.iw[w] * self.iw[w]) * (self.gr[w] * self.gr[w] + self.gi[w] * self.gi[w]);
         }
         self.kpv[0] = 0.0;
         for i in 1..LOOP_NKP { self.kpv[i] = geom(0.05, 12.0, LOOP_NKP - 1, i - 1); }
@@ -297,7 +392,7 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
             self.ok[c] = pm >= self.cfg.pm_min && s2max <= ms2 && l0 > 1.0;
             if self.ok[c] { self.okc[self.nok] = c as u16; self.mtr[self.nok] = mtr; self.nok += 1; }
         }
-        self.work_total = (LOOP_NW as u64) * PHI_COST * N as u64 + (self.nok * LOOP_NW) as u64;
+        self.nrows = (0..LOOP_NKP).filter(|&i| (0..LOOP_NKI).any(|k| self.ok[i * LOOP_NKI + k])).count();
     }
 
     /// One tick. `q`, `qd`: planned angles (rad) and velocities (rad/s) now; `a`, `b`: two reads of every encoder (rad);
@@ -333,8 +428,11 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
             let s = self.k - self.job_k;                                 // slice s of spread, s = 1 .. spread
             let target = (self.work_total * s).div_ceil(self.cfg.spread);
             while self.work_done < target && self.work_one() {}
-            if s >= self.cfg.spread {
-                while self.work_one() {}
+            if s >= self.cfg.spread {                                     // the last slice: whatever is left
+                if self.phase != Phase::Done {
+                    self.late += 1;
+                    while self.work_one() {}
+                }
                 self.apply();
                 self.job = false;
             }
@@ -388,6 +486,68 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
     pub fn delay(&self) -> f64 { self.d }
     /// With `spread` > 0: a recomputation is under way.
     pub fn pending(&self) -> bool { self.job }
+    /// The spread in use.
+    pub fn spread(&self) -> u64 { self.cfg.spread }
+    /// 0.3.2: (candidate, frequency) points the last recomputation evaluated.
+    pub fn points_evaluated(&self) -> u64 { self.evaluated }
+    /// The same without the speed-ups (as in 0.3.1).
+    pub fn points_total(&self) -> u64 { (self.nok * LOOP_NW) as u64 }
+    /// Recomputations done again from L (not certified, or a NaN).
+    pub fn fallbacks(&self) -> u64 { self.fallbacks }
+    /// With `spread` > 0: recomputations not finished before their last slice.
+    pub fn late(&self) -> u64 { self.late }
+    /// The smallest relative gap seen between the best J and the next among the candidates evaluated to the end
+    /// (with `prune`, the next is often dropped early: then this is larger than the true gap).
+    pub fn tie_margin(&self) -> f64 { self.margin }
+
+    /// 0.3.2, scheduling. The time one robust candidate's 1500 points take on this board, in seconds, by the caller's
+    /// clock: `now()` returns a 32-bit count that increases `hz` times a second and may wrap (on a Cortex-M7, the
+    /// cycle counter DWT CYCCNT). With the options of `new()` (quad or not). Call it when no recomputation is under way;
+    /// the shortest of `reps` runs, or `None`.
+    pub fn time_candidate<F: FnMut() -> u32>(&mut self, mut now: F, hz: f64, reps: usize) -> Option<f64> {
+        if self.job || self.nok == 0 || !(hz > 0.0) { return None; }
+        for j in 0..N {
+            for w in 0..LOOP_NW { self.phiw[j][w] = 1e-6 * pow(self.w2[w] + 1.0, -2.0) * self.dwf[w]; }   // gamma 3
+        }
+        let c = self.okc[self.nok / 2] as usize;
+        self.quad_now = self.cfg.quad;
+        self.prow = c / LOOP_NKI;
+        self.pvalid = 0;
+        if self.quad_now { for b in 0..NB { self.row(self.prow, b); self.pvalid += 1; } }   // P ready: the candidate alone
+        let mut best: Option<f64> = None;
+        for _ in 0..reps.max(1) {
+            self.jp = [0.0; N];
+            let t0 = now();
+            for b in 0..NB { self.block(c, b); }
+            let t1 = now();
+            let sec = t1.wrapping_sub(t0) as f64 / hz;
+            best = Some(match best { Some(x) if x <= sec => x, _ => sec });
+        }
+        self.sink = self.jp[0];
+        self.prow = usize::MAX;
+        self.work_done = 0;
+        self.evaluated = 0;
+        best
+    }
+
+    /// The smallest spread whose share of the recomputation takes at most `budget` seconds per tick (on top of the
+    /// ordinary tick), given the time of one candidate (`time_candidate()`). The work is counted as if nothing were
+    /// pruned, so the budget holds in every recomputation. `Some(0)` if the whole recomputation fits in one tick,
+    /// `None` if no spread below `every` fits. A scheduling choice from a measured cost and a declared budget.
+    pub fn spread_for(&self, seconds_per_candidate: f64, budget: f64) -> Option<u64> {
+        if !(seconds_per_candidate > 0.0) || !(budget > 0.0) { return None; }
+        let u = self.work_bound(N);
+        let unit = seconds_per_candidate / LOOP_NW as f64;
+        if u as f64 * unit <= budget { return Some(0); }
+        (1..self.cfg.every).find(|&m| (u.div_ceil(m) + ITEM_MAX) as f64 * unit <= budget)
+    }
+
+    /// Changes the spread between recomputations; false (and nothing changed) during one or if `m` is out of range.
+    pub fn set_spread(&mut self, m: u64) -> bool {
+        if self.job || (m > 0 && m >= self.cfg.every) { return false; }
+        self.cfg.spread = m;
+        true
+    }
 
     // block-mean (Hadamard) identification of the error the loop must cancel: second differences of adjacent block
     // means at lags 2 .. 256 ticks, the white floor 6 R dt / u removed, S(u) = A u^gamma on the finest growing lags
@@ -450,62 +610,198 @@ impl<const N: usize, const PIPE: usize> SyntonicLoopLaw<N, PIPE> {
         if any { self.started = true; }
     }
 
-    // the recomputation as a list of work items of FB frequencies each: first the spectrum (Phi of every joint), then,
-    // candidate after candidate, its J of every joint, summed over the 1500 frequencies in order. The order of the
-    // arithmetic does not depend on how the items are divided between ticks.
+    // The recomputation as a list of work items: the spectrum (Phi of every joint, SPEC_FB frequencies of one joint per
+    // item); with prune, the candidates in use (each once); then the robust candidates in index order. A candidate's J
+    // is summed over the 1500 frequencies in order, FB per item; with quad, the item first fills those FB frequencies
+    // of the Kp row's P if no candidate of the row has reached them yet. The order of the arithmetic does not depend on
+    // how the items are divided between ticks.
+    fn work_bound(&self, nwarm: usize) -> u64 {
+        let mut u = LOOP_NW as u64 * PHI_COST * N as u64 + (self.nok * LOOP_NW) as u64;
+        if self.cfg.prune { u += (nwarm * LOOP_NW) as u64; }
+        if self.cfg.quad { u += (self.nrows + if self.cfg.prune { nwarm } else { 0 }) as u64 * NB as u64 * ROW_UNITS; }
+        u
+    }
+
     fn start_job(&mut self) {
         for j in 0..N {
             self.c_j[j] = self.s_amp[j] / loop_k_gamma(self.s_gam[j]);
             self.ex[j] = -(1.0 + self.s_gam[j]) / 2.0;
             self.o2[j] = self.s_oc[j] * self.s_oc[j];
-            self.best_j[j] = f64::INFINITY;
-            self.bnew[j] = 0;
         }
-        self.item = 0;
+        self.nwarm = 0;
+        if self.cfg.prune {
+            for j in 0..N {                                              // the candidates in use, each once, if robust
+                if self.best[j] < 0 { continue; }
+                let c = self.best[j] as usize;
+                if !self.ok[c] || self.warmc[..self.nwarm].contains(&c) { continue; }
+                self.warmc[self.nwarm] = c;
+                self.warmp[self.nwarm] = self.okc[..self.nok].binary_search(&(c as u16)).unwrap();
+                self.nwarm += 1;
+            }
+        }
+        self.work_total = self.work_bound(self.nwarm);
         self.work_done = 0;
+        self.evaluated = 0;
+        self.phase = Phase::Spec;
+        self.item = 0;
+        self.nan = false;
+    }
+
+    // a pass over the candidates, by the quadratic form or from L; a NaN in the spectrum or the noise turns both
+    // speed-ups off (the partial sums are then not monotone), as 0.3.1
+    fn begin_pass(&mut self, quad: bool) {
+        self.quad_now = quad && !self.nan;
+        self.prune_now = self.cfg.prune && !self.nan;
+        self.b1 = [f64::INFINITY; N];
+        self.b2 = [f64::INFINITY; N];
+        self.c1 = [0; N];
+        self.bw = [f64::INFINITY; N];
+        self.p = 0;
+        self.blk = 0;
+        self.wk = 0;
+        self.prow = usize::MAX;
+        if self.prune_now && self.nwarm > 0 { self.phase = Phase::Warm; } else { self.phase = Phase::Scan; self.advance(); }
+    }
+
+    // to the scan's next candidate: those in use are not evaluated twice; after the last, the end of the pass
+    fn advance(&mut self) {
+        while self.p < self.nok {
+            let k = if self.prune_now { self.warmp[..self.nwarm].iter().position(|&x| x == self.p) } else { None };
+            match k {
+                Some(k) => { let jw = self.warm_j[k]; self.complete(self.okc[self.p] as usize, &jw); self.p += 1; }
+                None => return,
+            }
+        }
+        self.end_pass();
+    }
+
+    // the choice: certified if the next J exceeds the best by more than delta (needed with quad only)
+    fn end_pass(&mut self) {
+        let mut cert = true;
+        for j in 0..N {
+            if !(self.b2[j] > self.b1[j] * (1.0 + self.cfg.delta)) { cert = false; }
+            let m = (self.b2[j] - self.b1[j]) / fabs(self.b1[j]);
+            if m < self.margin { self.margin = m; }
+        }
+        if self.quad_now && !cert {
+            self.fallbacks += 1;
+            self.begin_pass(false);
+            return;
+        }
+        self.phase = Phase::Done;
+    }
+
+    fn complete(&mut self, c: usize, jv: &[f64; N]) {                    // the first smallest J, as numpy.argmin
+        for j in 0..N {
+            let v = jv[j];
+            if v < self.b1[j] || (v.is_nan() && !self.b1[j].is_nan()) {
+                self.b2[j] = self.b1[j];
+                self.b1[j] = v;
+                self.c1[j] = c;
+            } else if v < self.b2[j] {
+                self.b2[j] = v;
+            }
+        }
+    }
+
+    fn row(&mut self, i: usize, blk: usize) {                            // P of Kp row i, block blk
+        let kp = self.kpv[i];
+        for w in blk * FB..(blk + 1) * FB {
+            let (gr, gi) = (self.gr[w], self.gi[w]);
+            self.pf_row[w] = 1.0 + kp * (2.0 * gr + kp * (gr * gr + gi * gi));
+        }
+        self.work_done += ROW_UNITS;
+    }
+
+    fn block(&mut self, c: usize, blk: usize) {
+        let (w0, w1) = (blk * FB, (blk + 1) * FB);
+        if self.quad_now {
+            if c / LOOP_NKI != self.prow { self.prow = c / LOOP_NKI; self.pvalid = 0; }
+            if blk == self.pvalid { self.row(self.prow, blk); self.pvalid += 1; }   // the blocks are reached in order
+        }
+        if self.quad_now {
+            loop_block_quad::<N>(self.kiv[c % LOOP_NKI], &self.pf_row, &self.qf, &self.rf, &self.phiw, w0, w1, &mut self.jp);
+        } else {
+            loop_block_l::<N>(self.kpv[c / LOOP_NKI], self.kiv[c % LOOP_NKI], &self.iw, &self.gr, &self.gi, &self.phiw,
+                              w0, w1, &mut self.jp);
+        }
+        self.work_done += FB as u64;
+        self.evaluated += FB as u64;
     }
 
     fn work_one(&mut self) -> bool {
-        if self.item < NB {
-            for w in self.item * FB..(self.item + 1) * FB {
-                for j in 0..N { self.phiw[j][w] = self.c_j[j] * pow(self.w2[w] + self.o2[j], self.ex[j]) * self.dwf[w]; }
+        match self.phase {
+            Phase::Spec => {
+                let (blk, j) = (self.item / N, self.item % N);
+                for w in blk * SPEC_FB..(blk + 1) * SPEC_FB {
+                    let v = self.c_j[j] * pow(self.w2[w] + self.o2[j], self.ex[j]) * self.dwf[w];
+                    self.phiw[j][w] = v;
+                    if v.is_nan() { self.nan = true; }
+                }
+                self.work_done += SPEC_FB as u64 * PHI_COST;
+                self.item += 1;
+                if self.item == LOOP_NW / SPEC_FB * N {
+                    if self.s_r.iter().any(|x| x.is_nan()) { self.nan = true; }
+                    if self.nan { self.fallbacks += 1; }
+                    self.begin_pass(self.cfg.quad);
+                }
+                true
             }
-            self.work_done += FB as u64 * PHI_COST * N as u64;
-        } else if self.item < NB * (1 + self.nok) {
-            let q = self.item - NB;
-            let (p, blk) = (q / NB, q % NB);
-            let c = self.okc[p] as usize;
-            let (kp, ki) = (self.kpv[c / LOOP_NKI], self.kiv[c % LOOP_NKI]);
-            let mut jv = if blk == 0 { [0.0; N] } else { self.jacc };
-            for w in blk * FB..(blk + 1) * FB {
-                let kiw = ki * self.iw[w];
-                let lr = kp * self.gr[w] + kiw * self.gi[w];
-                let li = kp * self.gi[w] - kiw * self.gr[w];
-                let s2 = 1.0 / ((1.0 + lr) * (1.0 + lr) + li * li);   // |S|^2
-                for j in 0..N { jv[j] += self.phiw[j][w] * s2; }
+            Phase::Warm => {
+                let c = self.warmc[self.wk];
+                if self.blk == 0 { self.jp = [0.0; N]; }
+                self.block(c, self.blk);
+                self.blk += 1;
+                if self.blk == NB {
+                    for j in 0..N {
+                        let v = self.jp[j] + self.s_r[j] * self.mtr[self.warmp[self.wk]];
+                        self.warm_j[self.wk][j] = v;
+                        if v < self.bw[j] { self.bw[j] = v; }
+                    }
+                    self.blk = 0;
+                    self.wk += 1;
+                    if self.wk == self.nwarm { self.phase = Phase::Scan; self.advance(); }
+                }
+                true
             }
-            self.jacc = jv;
-            if blk == NB - 1 {
-                for j in 0..N {
-                    let jj = jv[j] + self.s_r[j] * self.mtr[p];
-                    if jj < self.best_j[j] || (jj.is_nan() && !self.best_j[j].is_nan()) {   // first minimum, as numpy.argmin
-                        self.best_j[j] = jj;
-                        self.bnew[j] = c as i32;
+            Phase::Scan => {
+                let c = self.okc[self.p] as usize;
+                if self.blk == 0 {
+                    for j in 0..N {
+                        self.jp[j] = 0.0;
+                        self.out[j] = false;
+                        self.thr[j] = (if self.bw[j] < self.b1[j] { self.bw[j] } else { self.b1[j] }) * (1.0 + self.cfg.delta);
                     }
                 }
+                self.block(c, self.blk);
+                self.blk += 1;
+                if self.prune_now {                                      // dropped once no joint can choose it
+                    let mut all = true;
+                    for j in 0..N {
+                        if !self.out[j] {
+                            if self.jp[j] + self.s_r[j] * self.mtr[self.p] > self.thr[j] { self.out[j] = true; } else { all = false; }
+                        }
+                    }
+                    if all { self.p += 1; self.blk = 0; self.advance(); return true; }
+                }
+                if self.blk == NB {
+                    let mut jv = [0.0; N];
+                    for j in 0..N { jv[j] = self.jp[j] + self.s_r[j] * self.mtr[self.p]; }
+                    self.complete(c, &jv);
+                    self.p += 1;
+                    self.blk = 0;
+                    self.advance();
+                }
+                true
             }
-            self.work_done += FB as u64;
-        } else {
-            return false;
+            Phase::Done => false,
         }
-        self.item += 1;
-        true
     }
 
     fn apply(&mut self) {
         for j in 0..N {
-            let c = self.bnew[j] as usize;
-            self.best[j] = self.bnew[j];
+            let c = self.c1[j];
+            self.best[j] = c as i32;
             self.kp[j] = self.kpv[c / LOOP_NKI];
             self.ki[j] = self.kiv[c % LOOP_NKI];
         }
@@ -538,7 +834,9 @@ mod tests {
 
     // two joints, 1 kHz, 3 ms frames, a 25 ms servo with 2 ms of delay, a random-walk disturbance, two noisy reads;
     // returns the first tick at which joint 0 has gains and its candidate
-    fn closed_loop(law: &mut SyntonicLoopLaw<2>, ticks: u64) -> (u64, usize) {
+    fn closed_loop(law: &mut SyntonicLoopLaw<2>, ticks: u64) -> (u64, usize) { closed_loop_traced(law, ticks, None) }
+
+    fn closed_loop_traced(law: &mut SyntonicLoopLaw<2>, ticks: u64, mut trace: Option<&mut [[f64; 2]]>) -> (u64, usize) {
         let mut rng = Rng(88172645463325252);
         let (mut th, mut dist, mut latched, mut pipe) = ([0.0; 2], [0.0; 2], [0.0; 2], [[0.0; 2]; 3]);
         let mut first = None;
@@ -557,6 +855,7 @@ mod tests {
             let send = k % 3 == 0;
             let cmd = *law.step(&q, &qd, &a, &b, send);
             if first.is_none() { if let Some(c) = law.gain_index(0) { first = Some((k, c)); } }
+            if let Some(t) = trace.as_deref_mut() { t[k as usize] = cmd; }
             for j in 0..2 {
                 if send { latched[j] = cmd[j]; }
                 let u = pipe[(k % 3) as usize][j];
@@ -604,6 +903,43 @@ mod tests {
             let mut s: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&[0.0; 2], &[6.0; 2], LoopLawConfig { spread: m, ..cfg }));
             assert_eq!(closed_loop(&mut s, 4000), (k0 + m, c0));                      // the same gains, m ticks later
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn delta_above_rounding() {
+        let _law: Box<SyntonicLoopLaw<1>> = Box::new(SyntonicLoopLaw::new(&[0.0], &[6.0], LoopLawConfig { delta: 1e-12, ..LoopLawConfig::default() }));
+    }
+
+    #[test]
+    fn speedups_give_the_same_commands() {
+        let base = LoopLawConfig { dead: 0.002, ..LoopLawConfig::default() };
+        let (mut want, mut got) = (vec![[0.0; 2]; 4000], vec![[0.0; 2]; 4000]);
+        let mut law: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&[0.0; 2], &[6.0; 2], LoopLawConfig { prune: false, quad: false, ..base }));
+        let (k0, _) = closed_loop_traced(&mut law, 4000, Some(&mut want));                // the scan of 0.3.1
+        let recs = (4000 - k0).div_ceil(base.every);
+        for (prune, quad, delta) in [(true, false, 1e-9), (false, true, 1e-9), (true, true, 1e-9), (true, true, 1e3)] {
+            let mut l: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&[0.0; 2], &[6.0; 2], LoopLawConfig { prune, quad, delta, ..base }));
+            closed_loop_traced(&mut l, 4000, Some(&mut got));
+            assert!(got == want, "prune {} quad {} delta {}: the commands differ", prune, quad, delta);
+            if delta > 1.0 { assert_eq!(l.fallbacks(), recs); }                                  // every choice fell back
+            else { assert_eq!(l.fallbacks(), 0); }
+            if prune && delta < 1.0 { assert!(l.points_evaluated() < l.points_total()); }
+        }
+    }
+
+    #[test]
+    fn scheduling() {
+        let mut law: Box<SyntonicLoopLaw<2>> = Box::new(SyntonicLoopLaw::new(&[0.0; 2], &[6.0; 2], LoopLawConfig { dead: 0.002, ..LoopLawConfig::default() }));
+        let cand = 1500.0 * 70.0 / 600e6;                                                     // 70 cycles a point at 600 MHz
+        let m = law.spread_for(cand, 0.00045).unwrap();
+        assert!(m > 0 && m < 500);
+        assert_eq!(law.spread_for(cand, 10.0), Some(0));
+        assert_eq!(law.spread_for(cand, 1e-5), None);
+        assert!(law.set_spread(m) && law.spread() == m && !law.set_spread(500) && law.spread() == m);
+        let mut t = 0u32;
+        let sec = law.time_candidate(|| { t = t.wrapping_add(4_000_000_000); t }, 1e9, 3).unwrap();   // wraps
+        assert!((sec - 4.0).abs() < 1e-12);
     }
 
     #[test]
