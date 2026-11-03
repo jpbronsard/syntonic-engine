@@ -1,7 +1,8 @@
 // Copyright 2026 Jean-Pierre Bronsard (SyntonicAI Recherche)
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE.
 //
-// Template: the syntonic engine on a Teensy 4.x for N joints, 1 kHz loop, 333 Hz servo frames.
+// Template: the syntonic engine on a Teensy 4.x for N joints, 1 kHz loop, 330 Hz servo frames (the usual maximum of
+// digital servos; drive the PWM at the frame your servos accept, e.g. analogWriteFrequency(pin, 330)).
 // Fill in readEncoder(), plannedAngle() and writeServo() for your board. Not yet run on hardware.
 #include "SyntonicEngine.h"   // copy cpp/SyntonicEngine.h next to this sketch
 
@@ -19,7 +20,7 @@ void onTick() { tick = true; }
 void setup() {
   syntonic::Config cfg;
   cfg.dt = 0.001;              // loop period
-  cfg.frame = 0.003;           // servo PWM frame (333 Hz)
+  cfg.frame = 1.0 / 330.0;     // servo PWM frame (330 Hz): a fact of the hardware, not a tuning
   cfg.servo_tau = 0.025;       // nominal servo reaction time (data sheet, else 25 ms)
   double q0[N], w0[N];
   for (int j = 0; j < N; j++) { q0[j] = readEncoder(j); w0[j] = 10.47; }   // w0: no-load speed (rad/s), data sheet

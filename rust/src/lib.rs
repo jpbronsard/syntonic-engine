@@ -105,7 +105,8 @@ pub enum Travel {
 pub struct Config {
     /// Loop period (s).
     pub dt: f64,
-    /// Servo command frame period (s), e.g. 0.003 for 333 Hz PWM.
+    /// Servo command frame period (s), e.g. 0.003 for 333 Hz PWM (the benches) or 1/330 for standard digital servos,
+    /// which accept about 330 Hz at most; a fact of the hardware.
     pub frame: f64,
     /// Nominal servo reaction time (s); 0.025 when the data sheet gives none.
     pub servo_tau: f64,

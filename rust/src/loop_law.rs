@@ -26,7 +26,7 @@
 //! - `LoopLawConfig::prune`: every term of J is positive, so a partial sum never decreases. The candidates in use are
 //!   evaluated first; every 50 frequencies a candidate is dropped once, for every joint, its partial J exceeds the
 //!   smaller of their J and the best J so far, times 1 + `delta` (1e-9): it cannot be chosen. On the replays this
-//!   evaluated 39 to 64 % of the points on average, but up to 94 % in one recomputation, so a per-tick budget cannot
+//!   evaluated 39 to 64 % of the points on average, but up to 96 % in one recomputation, so a per-tick budget cannot
 //!   count on it.
 //! - `LoopLawConfig::quad`: |1 + L|^2 = P + Ki (Q + Ki R), with P per Kp row and frequency, Q and R per frequency: four
 //!   operations and a division per point instead of ten and a division (70 instead of 97 cycles by LLVM's Cortex-M7

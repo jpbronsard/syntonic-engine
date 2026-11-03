@@ -1,0 +1,222 @@
+servo C1 A 71 PIDLM tip_mm   0.4530210810999078       recorded 0.4530210810999078       equal
+servo C1 A 71 PIDLM jitter_mm 0.40238601187243456      recorded 0.40238601187243456      equal
+servo C1 A 71 PIDLM joint_deg 0.020059869408384525     recorded 0.020059869408384525     equal
+servo C1 A 71 PIDL tip_mm    0.5200847807898379       recorded 0.5200847807898379       equal
+servo C1 A 71 PIDL jitter_mm 0.42730723759587663      recorded 0.42730723759587663      equal
+servo C1 A 71 PIDL joint_deg 0.022555660427398965     recorded 0.022555660427398965     equal
+servo C1 A 71 LAW tip_mm     0.46094973372876746      recorded 0.46094973372876746      equal
+servo C1 A 71 LAW jitter_mm  0.3346805111667539       recorded 0.3346805111667539       equal
+servo C1 A 71 LAW joint_deg  0.020830525682762058     recorded 0.020830525682762058     equal
+  17 s
+servo C1 A 71 LAW tip_mm     0.46094973372876746      recorded 0.46094973372876746      equal
+servo C1 A 72 LAW tip_mm     0.4639992318234072       recorded 0.4639992318234072       equal
+servo C1 A 73 LAW tip_mm     0.445643635767724        recorded 0.445643635767724        equal
+servo C1 A 74 LAW tip_mm     0.4634837005353198       recorded 0.4634837005353198       equal
+servo C1 A 75 LAW tip_mm     0.46832962779373705      recorded 0.46832962779373705      equal
+servo C1 B 71 LAW tip_mm     0.5133159776613677       recorded 0.5133159776613677       equal
+servo C1 B 72 LAW tip_mm     0.5155602465858512       recorded 0.5155602465858512       equal
+servo C1 B 73 LAW tip_mm     0.520479495733831        recorded 0.520479495733831        equal
+servo C1 B 74 LAW tip_mm     0.508579197954435        recorded 0.508579197954435        equal
+servo C1 B 75 LAW tip_mm     0.5104293701499427       recorded 0.5104293701499427       equal
+servo C2 A 71 LAW tip_mm     0.6055410674543762       recorded 0.6055410674543762       equal
+servo C2 A 72 LAW tip_mm     0.6273429210068584       recorded 0.6273429210068584       equal
+servo C2 A 73 LAW tip_mm     0.6189538366174797       recorded 0.6189538366174797       equal
+servo C2 A 74 LAW tip_mm     0.6185242902295814       recorded 0.6185242902295814       equal
+servo C2 A 75 LAW tip_mm     0.61034267282498         recorded 0.61034267282498         equal
+servo C2 B 71 LAW tip_mm     0.6816451408351679       recorded 0.6816451408351679       equal
+servo C2 B 72 LAW tip_mm     0.6832230904139096       recorded 0.6832230904139096       equal
+servo C2 B 73 LAW tip_mm     0.7007925169328215       recorded 0.7007925169328215       equal
+servo C2 B 74 LAW tip_mm     0.6817306134902446       recorded 0.6817306134902446       equal
+servo C2 B 75 LAW tip_mm     0.6907899126301489       recorded 0.6907899126301489       equal
+servo C3 A 71 LAW tip_mm     0.7600078715312327       recorded 0.7600078715312327       equal
+servo C3 A 72 LAW tip_mm     0.8191235039627401       recorded 0.8191235039627401       equal
+servo C3 A 73 LAW tip_mm     0.7741193124960458       recorded 0.7741193124960458       equal
+servo C3 A 74 LAW tip_mm     0.7709559777893905       recorded 0.7709559777893905       equal
+servo C3 A 75 LAW tip_mm     0.7539667613160693       recorded 0.7539667613160693       equal
+servo C3 B 71 LAW tip_mm     0.8371152811575268       recorded 0.8371152811575268       equal
+servo C3 B 72 LAW tip_mm     0.8438071197549807       recorded 0.8438071197549807       equal
+servo C3 B 73 LAW tip_mm     0.862923126510649        recorded 0.862923126510649        equal
+servo C3 B 74 LAW tip_mm     0.8533122407276302       recorded 0.8533122407276302       equal
+servo C3 B 75 LAW tip_mm     0.8414084799965106       recorded 0.8414084799965106       equal
+servo C4 A 71 LAW tip_mm     0.4908532387906712       recorded 0.4908532387906712       equal
+servo C4 A 72 LAW tip_mm     0.4787474481976192       recorded 0.4787474481976192       equal
+servo C4 A 73 LAW tip_mm     0.474753363381194        recorded 0.474753363381194        equal
+servo C4 A 74 LAW tip_mm     0.4798098407080803       recorded 0.4798098407080803       equal
+servo C4 A 75 LAW tip_mm     0.4862132456860217       recorded 0.4862132456860217       equal
+servo C4 B 71 LAW tip_mm     0.5646021406749198       recorded 0.5646021406749198       equal
+servo C4 B 72 LAW tip_mm     0.5690072755175417       recorded 0.5690072755175417       equal
+servo C4 B 73 LAW tip_mm     0.5734300595923045       recorded 0.5734300595923045       equal
+servo C4 B 74 LAW tip_mm     0.5611182771608683       recorded 0.5611182771608683       equal
+servo C4 B 75 LAW tip_mm     0.5613248128142815       recorded 0.5613248128142815       equal
+servo C5 A 71 LAW tip_mm     0.4313858437946686       recorded 0.4313858437946686       equal
+servo C5 A 72 LAW tip_mm     0.43223869251390873      recorded 0.43223869251390873      equal
+servo C5 A 73 LAW tip_mm     0.42904792709610573      recorded 0.42904792709610573      equal
+servo C5 A 74 LAW tip_mm     0.42892818532608346      recorded 0.42892818532608346      equal
+servo C5 A 75 LAW tip_mm     0.43224997268963566      recorded 0.43224997268963566      equal
+servo C5 B 71 LAW tip_mm     0.48095168067640026      recorded 0.48095168067640026      equal
+servo C5 B 72 LAW tip_mm     0.48408055858323257      recorded 0.48408055858323257      equal
+servo C5 B 73 LAW tip_mm     0.488920237466598        recorded 0.488920237466598        equal
+servo C5 B 74 LAW tip_mm     0.47694546456063464      recorded 0.47694546456063464      equal
+servo C5 B 75 LAW tip_mm     0.47817389043383896      recorded 0.47817389043383896      equal
+servo C6 A 71 LAW tip_mm     0.4853953117049127       recorded 0.4853953117049127       equal
+servo C6 A 72 LAW tip_mm     0.47964735742629827      recorded 0.47964735742629827      equal
+servo C6 A 73 LAW tip_mm     0.4766886242543867       recorded 0.4766886242543867       equal
+servo C6 A 74 LAW tip_mm     0.48150620705500163      recorded 0.48150620705500163      equal
+servo C6 A 75 LAW tip_mm     0.48576342509499093      recorded 0.48576342509499093      equal
+servo C6 B 71 LAW tip_mm     0.5643921572952826       recorded 0.5643921572952826       equal
+servo C6 B 72 LAW tip_mm     0.5707904285134322       recorded 0.5707904285134322       equal
+servo C6 B 73 LAW tip_mm     0.5754395797946903       recorded 0.5754395797946903       equal
+servo C6 B 74 LAW tip_mm     0.5628350117490971       recorded 0.5628350117490971       equal
+servo C6 B 75 LAW tip_mm     0.5647187393513241       recorded 0.5647187393513241       equal
+servo C7 A 71 LAW tip_mm     0.497881553912883        recorded 0.497881553912883        equal
+servo C7 A 72 LAW tip_mm     0.5066941399551113       recorded 0.5066941399551113       equal
+servo C7 A 73 LAW tip_mm     0.49247327562811777      recorded 0.49247327562811777      equal
+servo C7 A 74 LAW tip_mm     0.49174313836320416      recorded 0.49174313836320416      equal
+servo C7 A 75 LAW tip_mm     0.4947344096641505       recorded 0.4947344096641505       equal
+servo C7 B 71 LAW tip_mm     0.5998670167781953       recorded 0.5998670167781953       equal
+servo C7 B 72 LAW tip_mm     0.6023713908809061       recorded 0.6023713908809061       equal
+servo C7 B 73 LAW tip_mm     0.6031068481815657       recorded 0.6031068481815657       equal
+servo C7 B 74 LAW tip_mm     0.5969506173234954       recorded 0.5969506173234954       equal
+servo C7 B 75 LAW tip_mm     0.5991953793108747       recorded 0.5991953793108747       equal
+servo C8 A 71 LAW tip_mm     0.5496579848690297       recorded 0.5496579848690297       equal
+servo C8 A 72 LAW tip_mm     0.5615772675079236       recorded 0.5615772675079236       equal
+servo C8 A 73 LAW tip_mm     0.5353572319565536       recorded 0.5353572319565536       equal
+servo C8 A 74 LAW tip_mm     0.5543023012883983       recorded 0.5543023012883983       equal
+servo C8 A 75 LAW tip_mm     0.5448760400171078       recorded 0.5448760400171078       equal
+servo C8 B 71 LAW tip_mm     1.275559761642343        recorded 1.275559761642343        equal
+servo C8 B 72 LAW tip_mm     1.2598953419513175       recorded 1.2598953419513175       equal
+servo C8 B 73 LAW tip_mm     1.2631477049947102       recorded 1.2631477049947102       equal
+servo C8 B 74 LAW tip_mm     1.2658578080449894       recorded 1.2658578080449894       equal
+servo C8 B 75 LAW tip_mm     1.2663639536830733       recorded 1.2663639536830733       equal
+servo C9 A 71 LAW tip_mm     0.46544701733454924      recorded 0.46544701733454924      equal
+servo C9 A 72 LAW tip_mm     0.47481313910976736      recorded 0.47481313910976736      equal
+servo C9 A 73 LAW tip_mm     0.45865303768047333      recorded 0.45865303768047333      equal
+servo C9 A 74 LAW tip_mm     0.4680345736564708       recorded 0.4680345736564708       equal
+servo C9 A 75 LAW tip_mm     0.4791832215352748       recorded 0.4791832215352748       equal
+servo C9 B 71 LAW tip_mm     0.5280077249109077       recorded 0.5280077249109077       equal
+servo C9 B 72 LAW tip_mm     0.5292849783267561       recorded 0.5292849783267561       equal
+servo C9 B 73 LAW tip_mm     0.5360911045215878       recorded 0.5360911045215878       equal
+servo C9 B 74 LAW tip_mm     0.5227785025380743       recorded 0.5227785025380743       equal
+servo C9 B 75 LAW tip_mm     0.526257085785782        recorded 0.526257085785782        equal
+flight C1 500 LAW_R          0.04308594592197661      recorded 0.04308594592197661      equal
+flight C1 500 LAW_Rqb4       0.04993016382221937      recorded 0.04993016382221937      equal
+flight C1 501 LAW_R          0.05488279265396955      recorded 0.05488279265396955      equal
+flight C1 501 LAW_Rqb4       0.05577283488325393      recorded 0.05577283488325393      equal
+flight C1 502 LAW_R          0.08408396493839139      recorded 0.08408396493839139      equal
+flight C1 502 LAW_Rqb4       0.08635805651880667      recorded 0.08635805651880667      equal
+flight C1 503 LAW_R          0.038836629247453666     recorded 0.038836629247453666     equal
+flight C1 503 LAW_Rqb4       0.04342219392948728      recorded 0.04342219392948728      equal
+flight C1 504 LAW_R          0.08721881335536323      recorded 0.08721881335536323      equal
+flight C1 504 LAW_Rqb4       0.08634311727209562      recorded 0.08634311727209562      equal
+flight C1 505 LAW_R          0.0780084510041748       recorded 0.0780084510041748       equal
+flight C1 505 LAW_Rqb4       0.08061569463678114      recorded 0.08061569463678114      equal
+flight C1 506 LAW_R          0.0382445392788735       recorded 0.0382445392788735       equal
+flight C1 506 LAW_Rqb4       0.046187639618583        recorded 0.046187639618583        equal
+flight C1 507 LAW_R          0.04561752619051563      recorded 0.04561752619051563      equal
+flight C1 507 LAW_Rqb4       0.050195827826161596     recorded 0.050195827826161596     equal
+flight C1 508 LAW_R          0.08292670600313586      recorded 0.08292670600313586      equal
+flight C1 508 LAW_Rqb4       0.07894747350050146      recorded 0.07894747350050146      equal
+flight C1 509 LAW_R          0.05369856727509634      recorded 0.05369856727509634      equal
+flight C1 509 LAW_Rqb4       0.06240328098035371      recorded 0.06240328098035371      equal
+flight C2 500 LAW_R          0.3159697585141152       recorded 0.3159697585141152       equal
+flight C2 500 LAW_Rqb4       0.3197487476125249       recorded 0.3197487476125249       equal
+flight C2 501 LAW_R          0.18186257976350073      recorded 0.18186257976350073      equal
+flight C2 501 LAW_Rqb4       0.18266982788071445      recorded 0.18266982788071445      equal
+flight C2 502 LAW_R          0.21520308802094767      recorded 0.21520308802094767      equal
+flight C2 502 LAW_Rqb4       0.21633778437248635      recorded 0.21633778437248635      equal
+flight C2 503 LAW_R          0.20644488556070906      recorded 0.20644488556070906      equal
+flight C2 503 LAW_Rqb4       0.20966076383144794      recorded 0.20966076383144794      equal
+flight C2 504 LAW_R          0.7878561079845766       recorded 0.7878561079845766       equal
+flight C2 504 LAW_Rqb4       0.7897012240485857       recorded 0.7897012240485857       equal
+flight C2 505 LAW_R          0.34970337873076235      recorded 0.34970337873076235      equal
+flight C2 505 LAW_Rqb4       0.3556405587392595       recorded 0.3556405587392595       equal
+flight C2 506 LAW_R          0.13118559380727815      recorded 0.13118559380727815      equal
+flight C2 506 LAW_Rqb4       0.13391859333142         recorded 0.13391859333142         equal
+flight C2 507 LAW_R          0.3079637892189477       recorded 0.3079637892189477       equal
+flight C2 507 LAW_Rqb4       0.3088995763134571       recorded 0.3088995763134571       equal
+flight C2 508 LAW_R          0.6405106308614391       recorded 0.6405106308614391       equal
+flight C2 508 LAW_Rqb4       0.652796922154985        recorded 0.652796922154985        equal
+flight C2 509 LAW_R          0.4052729870754481       recorded 0.4052729870754481       equal
+flight C2 509 LAW_Rqb4       0.4145437904260168       recorded 0.4145437904260168       equal
+flight C3 500 LAW_R          0.15823326160361786      recorded 0.15823326160361786      equal
+flight C3 500 LAW_Rqb4       0.1584343300080926       recorded 0.1584343300080926       equal
+flight C3 501 LAW_R          0.10979163848126967      recorded 0.10979163848126967      equal
+flight C3 501 LAW_Rqb4       0.1096912082586127       recorded 0.1096912082586127       equal
+flight C3 502 LAW_R          0.10967363188790297      recorded 0.10967363188790297      equal
+flight C3 502 LAW_Rqb4       0.11031832623211062      recorded 0.11031832623211062      equal
+flight C3 503 LAW_R          0.12046584622391733      recorded 0.12046584622391733      equal
+flight C3 503 LAW_Rqb4       0.12014990896510579      recorded 0.12014990896510579      equal
+flight C3 504 LAW_R          0.1408455172245879       recorded 0.1408455172245879       equal
+flight C3 504 LAW_Rqb4       0.1408386704230521       recorded 0.1408386704230521       equal
+flight C3 505 LAW_R          0.19840377256234826      recorded 0.19840377256234826      equal
+flight C3 505 LAW_Rqb4       0.19862291086425443      recorded 0.19862291086425443      equal
+flight C3 506 LAW_R          0.07073040610696081      recorded 0.07073040610696081      equal
+flight C3 506 LAW_Rqb4       0.07121055035653488      recorded 0.07121055035653488      equal
+flight C3 507 LAW_R          0.13880381017013804      recorded 0.13880381017013804      equal
+flight C3 507 LAW_Rqb4       0.13892824746994983      recorded 0.13892824746994983      equal
+flight C3 508 LAW_R          0.1465486780175697       recorded 0.1465486780175697       equal
+flight C3 508 LAW_Rqb4       0.14614615236986914      recorded 0.14614615236986914      equal
+flight C3 509 LAW_R          0.15448221877273555      recorded 0.15448221877273555      equal
+flight C3 509 LAW_Rqb4       0.15451950995135783      recorded 0.15451950995135783      equal
+flight C4 500 LAW_R          0.049592845202047174     recorded 0.049592845202047174     equal
+flight C4 500 LAW_Rqb4       0.06580420735577161      recorded 0.06580420735577161      equal
+flight C4 501 LAW_R          0.06102786982506057      recorded 0.06102786982506057      equal
+flight C4 501 LAW_Rqb4       0.06977318575193396      recorded 0.06977318575193396      equal
+flight C4 502 LAW_R          0.12244592243847088      recorded 0.12244592243847088      equal
+flight C4 502 LAW_Rqb4       0.14446822843177654      recorded 0.14446822843177654      equal
+flight C4 503 LAW_R          0.04108726123855241      recorded 0.04108726123855241      equal
+flight C4 503 LAW_Rqb4       0.04374730959359568      recorded 0.04374730959359568      equal
+flight C4 504 LAW_R          0.12890876067758344      recorded 0.12890876067758344      equal
+flight C4 504 LAW_Rqb4       0.13598593636682563      recorded 0.13598593636682563      equal
+flight C4 505 LAW_R          0.08434859869812333      recorded 0.08434859869812333      equal
+flight C4 505 LAW_Rqb4       0.08516696013761058      recorded 0.08516696013761058      equal
+flight C4 506 LAW_R          0.0687140482468543       recorded 0.0687140482468543       equal
+flight C4 506 LAW_Rqb4       0.08804219267024731      recorded 0.08804219267024731      equal
+flight C4 507 LAW_R          0.08101385825868915      recorded 0.08101385825868915      equal
+flight C4 507 LAW_Rqb4       0.08012450107442252      recorded 0.08012450107442252      equal
+flight C4 508 LAW_R          0.10045661666673769      recorded 0.10045661666673769      equal
+flight C4 508 LAW_Rqb4       0.10332996351300892      recorded 0.10332996351300892      equal
+flight C4 509 LAW_R          0.0697232587753196       recorded 0.0697232587753196       equal
+flight C4 509 LAW_Rqb4       0.07851455737467102      recorded 0.07851455737467102      equal
+flight C5 500 LAW_R          0.12811155059625107      recorded 0.12811155059625107      equal
+flight C5 500 LAW_Rqb4       0.12861701072686327      recorded 0.12861701072686327      equal
+flight C5 501 LAW_R          0.11184396060048647      recorded 0.11184396060048647      equal
+flight C5 501 LAW_Rqb4       0.11264117852576605      recorded 0.11264117852576605      equal
+flight C5 502 LAW_R          0.1429326732590409       recorded 0.1429326732590409       equal
+flight C5 502 LAW_Rqb4       0.142484643441988        recorded 0.142484643441988        equal
+flight C5 503 LAW_R          0.12620136310438965      recorded 0.12620136310438965      equal
+flight C5 503 LAW_Rqb4       0.12620718096359376      recorded 0.12620718096359376      equal
+flight C5 504 LAW_R          0.10479048409713095      recorded 0.10479048409713095      equal
+flight C5 504 LAW_Rqb4       0.10571955913785917      recorded 0.10571955913785917      equal
+flight C5 505 LAW_R          0.1460781987621192       recorded 0.1460781987621192       equal
+flight C5 505 LAW_Rqb4       0.14619428112978206      recorded 0.14619428112978206      equal
+flight C5 506 LAW_R          0.09947909119299822      recorded 0.09947909119299822      equal
+flight C5 506 LAW_Rqb4       0.1000473128702128       recorded 0.1000473128702128       equal
+flight C5 507 LAW_R          0.12986082292854562      recorded 0.12986082292854562      equal
+flight C5 507 LAW_Rqb4       0.1296478768848011       recorded 0.1296478768848011       equal
+flight C5 508 LAW_R          0.13857365054586054      recorded 0.13857365054586054      equal
+flight C5 508 LAW_Rqb4       0.1381304279279415       recorded 0.1381304279279415       equal
+flight C5 509 LAW_R          0.12161105385907008      recorded 0.12161105385907008      equal
+flight C5 509 LAW_Rqb4       0.12146108264255935      recorded 0.12146108264255935      equal
+flight C6 500 LAW_R          0.11418741724610568      recorded 0.11418741724610568      equal
+flight C6 500 LAW_Rqb4       0.089693151539314        recorded 0.089693151539314        equal
+flight C6 501 LAW_R          0.07508187908622485      recorded 0.07508187908622485      equal
+flight C6 501 LAW_Rqb4       0.06188990835541181      recorded 0.06188990835541181      equal
+flight C6 502 LAW_R          0.17168230532297096      recorded 0.17168230532297096      equal
+flight C6 502 LAW_Rqb4       0.14461744200554383      recorded 0.14461744200554383      equal
+flight C6 503 LAW_R          0.11769039546030173      recorded 0.11769039546030173      equal
+flight C6 503 LAW_Rqb4       0.10026390991650425      recorded 0.10026390991650425      equal
+flight C6 504 LAW_R          0.0711552532475787       recorded 0.0711552532475787       equal
+flight C6 504 LAW_Rqb4       0.06178804037768353      recorded 0.06178804037768353      equal
+flight C6 505 LAW_R          0.11868301423219645      recorded 0.11868301423219645      equal
+flight C6 505 LAW_Rqb4       0.09475399883949347      recorded 0.09475399883949347      equal
+flight C6 506 LAW_R          0.10637733525588274      recorded 0.10637733525588274      equal
+flight C6 506 LAW_Rqb4       0.0862018103108771       recorded 0.0862018103108771       equal
+flight C6 507 LAW_R          0.08659215757791125      recorded 0.08659215757791125      equal
+flight C6 507 LAW_Rqb4       0.07221894079118896      recorded 0.07221894079118896      equal
+flight C6 508 LAW_R          0.1744645021741904       recorded 0.1744645021741904       equal
+flight C6 508 LAW_Rqb4       0.14386446466148967      recorded 0.14386446466148967      equal
+flight C6 509 LAW_R          0.10776440722268565      recorded 0.10776440722268565      equal
+flight C6 509 LAW_Rqb4       0.079918400808374        recorded 0.079918400808374        equal
+ScanLoopLaw: 91 law(s), 5733 recomputations, points evaluated 43.8% (largest 95.9%), fallbacks 0, smallest gap best-next J seen 4.08e-07
+218 values, largest difference 0.000e+00: PASS (exact) (1265 s)

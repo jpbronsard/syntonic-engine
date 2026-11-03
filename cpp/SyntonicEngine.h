@@ -18,7 +18,7 @@
 // servo lead on the planned velocity (feed-forward; call step_lead), and Config::travel, how the window travels toward
 // the law's target (TRAVEL_E: 1/tau relaxes exponentially, the e-geodesic of Dual Geodesy). See the Python module docstring.
 //
-// Usage (12 joints, 1 kHz loop, 333 Hz servo frames):
+// Usage (12 joints, 1 kHz loop, 333 Hz servo frames as on the benches; standard digital servos accept about 330 Hz at most (1/330 s); the frame is a fact of the hardware, not a tuning):
 //   syntonic::Engine<12> eng;  syntonic::Config cfg;  cfg.dt = 0.001; cfg.frame = 0.003;
 //   eng.begin(q0, w0, cfg);                       // q0: start angles (rad), w0: no-load speeds (rad/s)
 //   each tick:  const double* cmd = eng.step(q_plan, read_a, read_b);   // two reads of every encoder

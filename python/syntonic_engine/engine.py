@@ -89,7 +89,8 @@ class SyntonicEngine:
     ----------
     q0 : array (n,)          initial joint positions (rad)
     dt : float               loop period (s), e.g. 0.001
-    frame : float            servo command frame period (s), e.g. 0.003 for 333 Hz PWM
+    frame : float            servo command frame period (s), e.g. 0.003 for 333 Hz PWM (the benches) or 1/330 for
+                             standard digital servos, which accept about 330 Hz at most; a fact of the hardware
     w0 : array (n,) or float no-load servo speed (rad/s), from the data sheet
     servo_tau : float        nominal servo reaction time (s); 0.025 when the data sheet gives none
     floor : float or None    window lower bound (s); None = window_floor(dt, frame, sensor_delay)

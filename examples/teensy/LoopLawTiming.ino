@@ -26,7 +26,7 @@ static double ms(uint32_t c) { return c * 1e3 / F_CPU_ACTUAL; }
 // 5 s of a closed loop: a 25 ms servo with 2 ms of delay, a random-walk disturbance, two noisy reads per tick
 static void run(bool prune, bool quad, int spread) {
   syntonic::LoopLawConfig cfg;
-  cfg.dt = 0.001; cfg.frame = 0.003; cfg.servo_tau = 0.025; cfg.dead = 0.0025;
+  cfg.dt = 0.001; cfg.frame = 1.0 / 330.0; cfg.servo_tau = 0.025; cfg.dead = 0.0025;   // 330 Hz frames, as on ARM-1
   cfg.prune = prune; cfg.quad = quad; cfg.spread = spread;
   double q0[N] = {0, 0}, w0[N] = {6.0, 6.0};
   uint32_t c0 = ARM_DWT_CYCCNT;

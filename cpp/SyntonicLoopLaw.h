@@ -27,8 +27,8 @@
 //   LoopLawConfig::prune: every term of J is positive, so a partial sum never decreases. The candidates in use are
 //     evaluated first; every 50 frequencies a candidate is dropped once, for every joint, its partial J exceeds the
 //     smaller of their J and the best J so far, times 1 + delta (1e-9): it cannot be chosen. On the replays this
-//     evaluated 39 to 64 % of the points on average, but up to 94 % in one recomputation (a disturbance step), so a
-//     per-tick budget cannot count on it.
+//     evaluated 39 to 64 % of the points on average, but up to 96 % in one recomputation, so a per-tick budget
+//     cannot count on it.
 //   LoopLawConfig::quad: |1 + L|^2 = P + Ki (Q + Ki R), with P per Kp row and frequency, Q and R per frequency, costs
 //     four operations and a division per point instead of ten and a division (70 instead of 97 cycles per point by
 //     LLVM's Cortex-M7 model). It changes J by rounding only (at most about 5e-13 relative for a robust candidate), so
@@ -55,7 +55,7 @@
 // an emulated Cortex-M7 with newlib (bench/port_2026-11-02/m7/run_qemu.sh). With GCC, -ffp-contract=off keeps the PC's
 // arithmetic; GCC's default for the gnu++ dialects fuses multiply-adds, with differences of rounding size only.
 //
-// Usage (two joints, 1 kHz loop, 333 Hz servo frames):
+// Usage (two joints, 1 kHz loop, 333 Hz servo frames as on the benches; standard digital servos accept about 330 Hz at most (1/330 s); the frame is a fact of the hardware, not a tuning):
 //   static syntonic::SyntonicLoopLaw<2> law;  syntonic::LoopLawConfig cfg;  cfg.dead = 0.0025;
 //   law.begin(q0, w0, cfg);                     // q0: start angles (rad), w0: no-load speeds (rad/s); false if a fact is wrong
 //   optionally, on the board:  law.set_spread(law.spread_for(law.time_candidate(cycles, F_CPU_ACTUAL), 0.00045));
